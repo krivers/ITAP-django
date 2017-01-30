@@ -112,7 +112,7 @@ def updateChangeVectors(changes, oldStart, newStart):
 		newState = change.applyChange()
 	return changes, newState
 
-def applyChangeVectors(s, changes, goals):
+def applyChangeVectors(s, changes, states, goals):
 	"""Attempt to apply all the changes listed to the solution state s"""
 	if len(changes) == 0:
 		return s
@@ -124,9 +124,9 @@ def applyChangeVectors(s, changes, goals):
 
 	# Now, make the new state!
 	newFun = printFunction(newState)
-	matches = list(filter(lambda x : x.code == newFun, goals))
 	#matches = list(AnonState.objects.filter(problem=s.problem, code=newFun)) + \
 	#		  list(CanonicalState.objects.filter(problem=s.problem, code=newFun))
+	matches = list(filter(lambda x : x.code==newFun, states))
 	if len(matches) > 0:
 		matches = sorted(matches, key=lambda x : getattr(x, "count"))
 		tmpN = matches[-1]
@@ -138,9 +138,12 @@ def applyChangeVectors(s, changes, goals):
 		n.tree_source = tree_to_str(newState)
 		n.treeWeight = getWeight(newState)
 		n = codetest(n)
+		states.append(n)
+		if n.score == 1:
+			goals.append(n)
 		return n
 
-def chooseGoal(s, goals):
+def chooseGoal(s, goals, states):
 	# First, find the closest goal state and the changes required to get to it
 	goalDist = 2 # the max dist is 1
 	goal = origGoal = None
@@ -155,7 +158,7 @@ def chooseGoal(s, goals):
 	if goal != None:
 		goalDist = 2 # reset because now we're going to count variables
 		origGoal = goal
-		allDistributions = generateVariableDistributions(s, goal, goals)
+		allDistributions = generateVariableDistributions(s, goal, goals, states)
 		for modG in allDistributions:
 			(tempD, tempChanges) = distance(s, modG)
 			# prefer more common goals over less common ones
@@ -163,7 +166,7 @@ def chooseGoal(s, goals):
 				(goal, goalDist, changes) = (modG, tempD, tempChanges)
 	return goal
 
-def generateVariableDistributions(s, g, goals):
+def generateVariableDistributions(s, g, goals, states):
 	sParameters = gatherAllParameters(s.tree)
 	gParameters = gatherAllParameters(g.tree)
 	sVariables = gatherAllVariables(s.tree) - sParameters
@@ -239,6 +242,8 @@ def generateVariableDistributions(s, g, goals):
 				log(g.code, "bug")
 				log(tmpCode, "bug")
 			allFuns.append(tmpG)
+			goals.append(tmpG)
+			states.append(tmpG)
 	return allFuns
 
 def generateVariableMappings(s, g):
@@ -254,7 +259,7 @@ def generateVariableMappings(s, g):
 		allMaps += restMaps
 	return allMaps
 
-def optimizeGoal(s, changes, states):
+def optimizeGoal(s, changes, states, goals):
 	"""To optimize the goal, we will work our way up through possible combinations of edits, stopping when we reach
 	a distance that we know is optimal"""
 	currentGoal, currentDiff, currentEdits = s.goal, s.goalDist, changes # set up values that will change
@@ -278,7 +283,7 @@ def optimizeGoal(s, changes, states):
 				if isStrictSubset(currentEdits, newChanges):	continue
 
 				# Check to see that the state exists and that it isn't too far away
-				newState = applyChangeVectors(s, newChanges, states + [c[1] for c in allChanges])
+				newState = applyChangeVectors(s, newChanges, states, goals)
 				if newState == None: # shouldn't happen
 					log("generateNextStates\toptimizeGoal\tBroken edit: " + str(newChanges), "bug")
 					continue
@@ -300,13 +305,13 @@ def optimizeGoal(s, changes, states):
 	else:
 		s.goal, s.goalDist = currentGoal, currentDiff # otherwise, put in the new goal
 
-def fastOptimizeGoal(s, changes, goals, includeSmallSets=False):
+def fastOptimizeGoal(s, changes, states, goals, includeSmallSets=False):
 	# Only try out one, two, all but two, all but one
 	fastChanges = fastPowerSet(changes, includeSmallSets)
 	currentGoal, currentDiff, currentEdits = s.goal, s.goalDist, changes
 	for changeSet in fastChanges:
 		if isStrictSubset(currentEdits, changeSet):	continue
-		newState = applyChangeVectors(s, changeSet, goals)
+		newState = applyChangeVectors(s, changeSet, states, goals)
 		if newState == None:	continue
 		newDistance, _ = distance(s, newState, givenChanges=changeSet)
 		if newDistance <= currentDiff and newState.score == 1:
@@ -352,7 +357,7 @@ def isValidNextState(s, n, g):
 	# If we pass all the checks, it's a valid state
 	return True
 
-def generateStatesInPath(s, goals, validCombinations):
+def generateStatesInPath(s, goals, states, validCombinations):
 	# Now we need to find the desirability of each state and take the best one
 	# We'll keep cycling here to find the whole path of states 'til we get to the correct solution
 	originalS = s
@@ -366,7 +371,7 @@ def generateStatesInPath(s, goals, validCombinations):
 		if bestState == None:
 			log("Path Construction\tgetNextState\t" + str(s.id) + " could not find best next out of " + str(len(validCombinations)) + " combinations", "bug")
 			if s != originalS:
-				getNextState(s, goals) # start over with the broken state- resetting the diff will probably help
+				getNextState(s, goals, states) # start over with the broken state- resetting the diff will probably help
 			else:
 				log("Path Construction\tgetNextState\tPermanently stuck", "bug")
 			break
@@ -376,9 +381,9 @@ def generateStatesInPath(s, goals, validCombinations):
 			validCombinations = filterChanges(validCombinations, s.edit, s, s.next)
 		s = s.next
 
-def getNextState(s, goals, given_goal=None):
+def getNextState(s, goals, states, given_goal=None):
 	"""Generate the best next state for s, so that it will produce a desirable hint"""
-	s.goal = chooseGoal(s, goals) if given_goal == None else given_goal
+	s.goal = chooseGoal(s, goals, states) if given_goal == None else given_goal
 	if s.goal == None:
 		log("Path Construction\tgetNextState\tno goal found\t" + s.problem.name, "bug")
 		return
@@ -386,7 +391,7 @@ def getNextState(s, goals, given_goal=None):
 
 	firstRound = True
 	while len(changes) > 8:
-		fastChanges = fastOptimizeGoal(s, changes, goals, includeSmallSets=firstRound)
+		fastChanges = fastOptimizeGoal(s, changes, states, goals, includeSmallSets=firstRound)
 		firstRound = False
 		if fastChanges == None:
 			# Just say that the next state is the goal.
@@ -396,7 +401,7 @@ def getNextState(s, goals, given_goal=None):
 			changes = fastChanges
 
 	# Now, update the goal by optimizing for it
-	allCombinations = optimizeGoal(s, changes, goals)
+	allCombinations = optimizeGoal(s, changes, states, goals)
 	if allCombinations == None: # There's an optimized goal
 		# Let's get the new change vectors!
 		changes = getChanges(s.tree, s.goal.tree)
@@ -404,7 +409,7 @@ def getNextState(s, goals, given_goal=None):
 		# Also find the solution states associated with the changes
 		allCombinations = []
 		for x in allChanges:
-			allCombinations.append((x, applyChangeVectors(s, x, goals + [c[1] for c in allCombinations])))
+			allCombinations.append((x, applyChangeVectors(s, x, states, goals)))
 	s.changesToGoal = len(changes)
 
 	# Now check for the required properties of a next state. Filter before sorting to save time
@@ -418,4 +423,4 @@ def getNextState(s, goals, given_goal=None):
 		s.next = None
 		return
 
-	generateStatesInPath(s, goals, validCombinations)
+	generateStatesInPath(s, goals, states, validCombinations)

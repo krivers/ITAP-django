@@ -194,11 +194,11 @@ def generate_anon_state(cleaned_state, given_names):
 								   feedback=cleaned_state.feedback) 
 			anon_state.tree_source = tree_to_str(anon_tree)
 			anon_state.treeWeight = diffAsts.getWeight(anon_tree)
-		elif len(prior_anon) == 1:
+		else:
+			if len(prior_anon) > 1:
+				log("getHint\tgenerate_anon_state\tDuplicate code entries in anon: " + anon_code, "bug")
 			anon_state = prior_anon[0]
 			anon_state.count += 1
-		else:
-			log("getHint\tgenerate_anon_state\tDuplicate code entries in anon: " + anon_code, "bug")
 		anon_state.tree = anon_tree
 		anon_state.orig_tree = orig_tree
 		anon_state.orig_tree_source = tree_to_str(orig_tree)
@@ -210,7 +210,8 @@ def generate_canonical_state(cleaned_state, anon_state, given_names):
 	if anon_state.count > 1 and anon_state.canonical != None:
 		canonical_state = anon_state.canonical
 		canonical_state.tree = str_to_tree(canonical_state.tree_source)
-		canonical_state.orig_tree = str_to_tree(canonical_state.orig_tree_source)
+		canonical_state.orig_tree = deepcopy(cleaned_state.tree)
+		canonical_state.orig_tree_source = tree_to_str(canonical_state.orig_tree)
 	else:
 		canonical_state = CanonicalState(code=cleaned_state.code, problem=cleaned_state.problem,
 										 score=cleaned_state.score, count=1, 
@@ -225,14 +226,16 @@ def generate_canonical_state(cleaned_state, anon_state, given_names):
 		if len(prior_canon) == 0:
 			canonical_state.tree_source = tree_to_str(canonical_state.tree)
 			canonical_state.treeWeight = diffAsts.getWeight(canonical_state.tree)
-		elif len(prior_canon) == 1:
+		else:
+			if len(prior_canon) > 1:
+				log("getHint\tgenerate_canonical_state\tDuplicate code entries in canon: " + canonical_state.code, "bug")
 			prev_tree = canonical_state.tree
 			canonical_state = prior_canon[0]
 			canonical_state.count += 1
 			canonical_state.tree = prev_tree
 			canonical_state.orig_tree = orig_tree
-		else:
-			log("getHint\tgenerate_canonical_state\tDuplicate code entries in canon: " + canonical_state.code, "bug")
+			canonical_state.orig_tree_source = tree_to_str(orig_tree)
+
 	return canonical_state
 
 def generate_states(source_state, given_names):
@@ -317,8 +320,6 @@ def get_hint(source_state, hintLevel=-1):
 	imports = getAllImports(source_state.tree) + getAllImports(given_code)
 	given_names = [str(x) for x in list(args.keys()) + imports]
 
-	(cleaned_state, anon_state, canonical_state) = generate_states(source_state, given_names)
-
 	# Setup the correct states we need for future work
 	goals = list(AnonState.objects.filter(problem=source_state.problem, score=1)) + \
 			list(CanonicalState.objects.filter(problem=source_state.problem, score=1))
@@ -326,6 +327,11 @@ def get_hint(source_state, hintLevel=-1):
 		goal.tree = str_to_tree(goal.tree_source)
 		#goal.tree = propogateMetadata(goal.tree, args, {}, [0]) # This shouldn't be necessary...
 		#goal.tree = propogateNameMetadata(goal.tree, given_names)
+
+	(cleaned_state, anon_state, canonical_state) = generate_states(source_state, given_names)
+
+	states = list(AnonState.objects.filter(problem=source_state.problem)) + \
+			 list(CanonicalState.objects.filter(problem=source_state.problem))
 
 	if source_state.score == 1:
 		examples = find_example_solutions(source_state, goals)
@@ -355,19 +361,19 @@ def get_hint(source_state, hintLevel=-1):
 
 		# If necessary, generate next/goal states for the anon and canonical states
 		if anon_state.goal == None:
-			generateNextStates.getNextState(anon_state, goals)
+			generateNextStates.getNextState(anon_state, goals, states)
 		else:
 			# Is there a better goal available now?
-			best_goal = generateNextStates.chooseGoal(anon_state, goals)
+			best_goal = generateNextStates.chooseGoal(anon_state, goals, states)
 			if anon_state.goal != best_goal:
-				generateNextStates.getNextState(anon_state, goals, best_goal)
+				generateNextStates.getNextState(anon_state, goals, states, best_goal)
 		if canonical_state.goal == None:
-			generateNextStates.getNextState(canonical_state, goals)
+			generateNextStates.getNextState(canonical_state, goals, states)
 		else:
 			# Is there a better goal available now?
-			best_goal = generateNextStates.chooseGoal(canonical_state, goals)
+			best_goal = generateNextStates.chooseGoal(canonical_state, goals, states)
 			if canonical_state.goal != best_goal:
-				generateNextStates.getNextState(canonical_state, goals, best_goal)
+				generateNextStates.getNextState(canonical_state, goals, states, best_goal)
 
 		# Then choose the best path to use
 		anon_distance, _ = diffAsts.distance(anon_state, anon_state.goal, forceReweight=True)
