@@ -672,10 +672,7 @@ def mapEdit(canon, orig, edit, nameMap=None):
 				else:
 					for change in newChanges:
 						change.path = change.path + cv.path
-					log("individualize\tmapEdit\tOriginal edit: " + str(edit), "bug")
-					log("individualize\tmapEdit\tRedoing changes: " + str(newChanges), "bug")
 					newChanges, _ = generateNextStates.updateChangeVectors(newChanges, cv.start, cv.start)
-					log("individualize\tmapEdit\tRedoing changes: " + str(newChanges), "bug")
 					edit[count:count+1] = newChanges
 					continue # don't increment count
 		edit[count] = cv

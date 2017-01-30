@@ -269,8 +269,8 @@ def save_states(source, cleaned, anon, canonical):
 			g = n.goal
 			if g != None:
 				if g.goal != None:
-					print(str(g.score) + "," + g.code)
-					print(str(g.goal.score) + "," + g.goal.code)
+					log("getHint\tsave_states\tWeird goal goal: " + str(g.score) + "," + g.code, "bug")
+					log("getHint\tsave_states\tWeird goal goal: " + str(g.goal.score) + "," + g.goal.code, "bug")
 				g.save()
 				n.goal = g
 			n.save()
@@ -325,8 +325,6 @@ def get_hint(source_state, hintLevel=-1):
 			list(CanonicalState.objects.filter(problem=source_state.problem, score=1))
 	for goal in goals:
 		goal.tree = str_to_tree(goal.tree_source)
-		#goal.tree = propogateMetadata(goal.tree, args, {}, [0]) # This shouldn't be necessary...
-		#goal.tree = propogateNameMetadata(goal.tree, given_names)
 
 	(cleaned_state, anon_state, canonical_state) = generate_states(source_state, given_names)
 

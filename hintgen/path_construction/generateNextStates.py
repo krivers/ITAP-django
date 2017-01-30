@@ -124,8 +124,6 @@ def applyChangeVectors(s, changes, states, goals):
 
 	# Now, make the new state!
 	newFun = printFunction(newState)
-	#matches = list(AnonState.objects.filter(problem=s.problem, code=newFun)) + \
-	#		  list(CanonicalState.objects.filter(problem=s.problem, code=newFun))
 	matches = list(filter(lambda x : x.code==newFun, states))
 	if len(matches) > 0:
 		matches = sorted(matches, key=lambda x : getattr(x, "count"))
@@ -224,8 +222,6 @@ def generateVariableDistributions(s, g, goals, states):
 		tmpCode = printFunction(tmpTree)
 
 		matches = list(filter(lambda x : x.code==tmpCode, goals))
-		#matches = list(AnonState.objects.filter(problem=s.problem, code=tmpCode)) + \
-		#		  list(CanonicalState.objects.filter(problem=s.problem, code=tmpCode))
 		if len(matches) > 0:
 			matches = sorted(matches, key=lambda s: getattr(s, "count"))
 			tmpG = matches[-1]
