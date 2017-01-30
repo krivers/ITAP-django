@@ -142,8 +142,6 @@ def score(s, tests, returnFeedback=False):
 		while (p.is_alive()) and (not done):
 			continue
 		timer.cancel()
-		sys.stdout = out
-		sys.stderr = err
 		# If the process is still running, kill it
 		if p.is_alive():
 			timeout = True
@@ -156,6 +154,8 @@ def score(s, tests, returnFeedback=False):
 				log("testHarness\tscore\tThread is still alive!", "bug")
 			while p.is_alive():
 				time.sleep(0.01)
+		sys.stdout = out
+		sys.stderr = err
 		done = False
 	except Exception as e:
 		log("testHarness\tscore\tBroken process: " + str(e), "bug")

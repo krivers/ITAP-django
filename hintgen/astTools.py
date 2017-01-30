@@ -1,4 +1,4 @@
-import ast, copy, pickle, types
+import ast, copy, pickle
 from .tools import log
 from .namesets import *
 from .display import printFunction
@@ -685,7 +685,7 @@ def eventualType(a):
 		if a.value == True or a.value == False:
 			return bool
 		elif a.value == None:
-			return types.NoneType
+			return type(None)
 		return None
 	elif type(a) == ast.Name:
 		if hasattr(a, "type"): # If it's a variable we categorized
