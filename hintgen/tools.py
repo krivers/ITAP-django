@@ -1,5 +1,5 @@
 """This is a file of useful functions used throughout the hint generation program"""
-import time, os.path, ast, test, json
+import time, os.path, ast, json
 from .paths import *
 
 def log(msg, filename="main", newline=True):
