@@ -39,15 +39,15 @@ class ProblemAdmin(admin.ModelAdmin):
     list_display = ('name',)
     inlines = [
         TestcasesInline,
-        SourceStateInline,
+    #    SourceStateInline,
     ]
 
 @admin.register(Hint)
 class HintAdmin(admin.ModelAdmin):
     list_display = ('level', 'message', 'id')
-    inlines = [
-        SourceStateInline,
-    ]
+    #inlines = [
+    #    SourceStateInline,
+    #]
 
 @admin.register(Testcase)
 class TestcaseAdmin(admin.ModelAdmin):
