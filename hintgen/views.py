@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseBadRequest
 import json
 from .models import *
-from .getHint import get_hint
+from .getHint import get_hint, run_tests
 
 """
 TESTING
