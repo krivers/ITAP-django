@@ -21,8 +21,16 @@ def test(s, forceRetest=False):
 		tests = s.problem.tests.all()
 		for i in range(len(tests)):
 			# Need to interpret from repr
-			tests[i].input = eval(tests[i].test_input)
-			tests[i].output = eval(tests[i].test_output)
+			try:
+				tests[i].input = eval(tests[i].test_input)
+				tests[i].output = eval(tests[i].test_output)
+			except:
+				s.score = 0
+				if not hasattr(tests[i], "input"):
+					s.feedback = "Broken test case input: " + tests[i].test_input + "\nExpecting a tuple of values."
+				else:
+					s.feedback = "Broken test case output: " + tests[i].test_output + "\nExpecting a legal Python value."
+				return s
 		loaded_pairs[s.problem.id] = tests
 
 	tests = loaded_pairs[s.problem.id]
