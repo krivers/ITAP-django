@@ -40,7 +40,11 @@ def textToFunction(s):
 	tmpFile = "tmp" + str(random.randint(0,100000))
 	tmpPath = TEST_PATH + "tmp"
 	tmpFull = tmpPath + "/" + tmpFile
-	f = open(tmpFull + ".py", "w")
+	try:
+		f = open(tmpFull + ".py", "w")
+	except:
+		s.feedback = "ERROR: could not write file, please change permissions in the test/tmp folder"
+		return None
 	# Set this up to look like Python 3
 	#f.write("from __future__ import (absolute_import, division, print_function)\n")
 	if len(instructorFunctions) != 0:
@@ -61,12 +65,14 @@ def textToFunction(s):
 	if os.path.exists(tmpFull + ".pyc"):
 		os.remove(tmpFull + ".pyc")
 	if failed:
+		s.feedback = "ERROR: could not load function, possibly due to compiler error in instructorFunctions"
 		return None
 
 	# Load the resulting function from the file. It will have references to all necessary helpers
 	if hasattr(mod, s.problem.name):
 		loaded = getattr(mod, s.problem.name)
 	else:
+		s.feedback = "ERROR: could not find required function in code"
 		return None
 
 	s.loadedFun = loaded
@@ -121,6 +127,8 @@ def score(s, tests, returnFeedback=False):
 		s.loadedFun = None
 		s.loadedFun = textToFunction(s)
 	f = s.loadedFun
+	if f == None:
+		return (0, s.feedback) if returnFeedback else 0
 	global done
 	score = 0
 	out = sys.stdout
