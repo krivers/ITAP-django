@@ -387,6 +387,9 @@ def get_hint(source_state, hintLevel=-1):
 			used_state = canonical_state
 
 		while True:
+			if used_state.next == None:
+				log("getHint\tget_hint\tCould not find next state for state " + used_state.id, "bug")
+				break
 			next_state = used_state.next
 			if not hasattr(next_state, "tree"):
 				next_state.tree = str_to_tree(next_state.tree_source)

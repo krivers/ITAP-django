@@ -460,6 +460,8 @@ def distance(s, t, givenChanges=None, forceReweight=False, ignoreVariables=False
 	"""A method for comparing solution states, which returns a number between
 		0 (identical solutions) and 1 (completely different)"""
 	# First weigh the trees, to propogate metadata
+	if s == None or t == None:
+		return 1 # can't compare to a None state
 	if forceReweight:
 		baseWeight = max(getWeight(s.tree), getWeight(t.tree))
 	else:
