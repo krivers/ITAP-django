@@ -279,7 +279,8 @@ def save_states(source, cleaned, anon, canonical):
 			n.save()
 			next_chain[i-1].next = n
 
-	source.hint.save()
+	if source.hint != None:
+		source.hint.save()
 	canonical.save()
 	anon.save()
 	cleaned.save()
