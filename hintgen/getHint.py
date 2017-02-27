@@ -207,6 +207,9 @@ def generate_anon_state(cleaned_state, given_names):
 def generate_canonical_state(cleaned_state, anon_state, given_names):
 	# Second level of abstraction: canonicalize the AST. Gets rid of redundancies.
 	args = eval(anon_state.problem.arguments)
+	if type(args) != dict:
+		log("getHint\tgenerate_canonical_state\tBad args format: " + anon_state.problem.arguments, "bug")
+		args = { }
 	if anon_state.count > 1 and anon_state.canonical != None:
 		canonical_state = anon_state.canonical
 		canonical_state.tree = str_to_tree(canonical_state.tree_source)
@@ -302,7 +305,8 @@ def run_tests(source_state):
 	args = eval(source_state.problem.arguments)
 	given_code = ast.parse(source_state.problem.given_code)
 	imports = getAllImports(source_state.tree) + getAllImports(given_code)
-	given_names = [str(x) for x in list(args.keys()) + imports]
+	inp = imports + (list(args.keys()) if type(args) == dict else [])
+	given_names = [str(x) for x in inp]
 
 	(cleaned_state, anon_state, canonical_state) = generate_states(source_state, given_names)
 	save_states(source_state, cleaned_state, anon_state, canonical_state)
@@ -318,7 +322,8 @@ def get_hint(source_state, hintLevel=-1):
 	args = eval(source_state.problem.arguments)
 	given_code = ast.parse(source_state.problem.given_code)
 	imports = getAllImports(source_state.tree) + getAllImports(given_code)
-	given_names = [str(x) for x in list(args.keys()) + imports]
+	inp = imports + (list(args.keys()) if type(args) == dict else [])
+	given_names = [str(x) for x in inp]
 
 	# Setup the correct states we need for future work
 	goals = list(AnonState.objects.filter(problem=source_state.problem, score=1)) + \
