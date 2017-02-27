@@ -120,7 +120,7 @@ def hint(request, course_id, problem_id):
     code_state = get_hint(code_state)
     result_object = { "hint_message" : code_state.hint.message, "line" : code_state.hint.line,
                       "col" : code_state.hint.col, "hint_type" : code_state.hint.level }
-    return HttpResponse(json.dumps(result_objecct))
+    return HttpResponse(json.dumps(result_object))
 
 def unpack_problem_json(request):
     data = json.loads(request.body.decode('utf-8'))
