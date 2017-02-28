@@ -21,7 +21,7 @@ response = c.post('/hintgen/hint/' + str(course_id) + '/' + str(problem_id) + '/
 def index(request):
     return HttpResponse("Hello, world. You've reached the hint generation index!")
 
-def unpack_code_json(request, course_id, problem_id):
+def unpack_code_json(request, course_name, problem_name):
     # request_body = request.body.decode('utf-8')
     # if len(request_body) == 0:
     #     return HttpResponseBadRequest("Empty request body; need to include a json object")
@@ -33,12 +33,12 @@ def unpack_code_json(request, course_id, problem_id):
     if 'student_id' not in data:
         return HttpResponseBadRequest("Need to include a reference to 'student_id' in the json object")
 
-    course = Course.objects.filter(id=course_id)
+    course = Course.objects.filter(name=course_name)
     if len(course) != 1:
         return HttpResponseBadRequest("No course exists with that ID")
     course = course[0]
 
-    problem = Problem.objects.filter(id=problem_id)
+    problem = Problem.objects.filter(name=problem_name)
     if len(problem) != 1:
         return HttpResponseBadRequest("No problem exists with that ID")
     problem = problem[0]
