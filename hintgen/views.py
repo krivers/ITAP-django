@@ -33,14 +33,26 @@ def unpack_code_json(request, course_name, problem_name):
     if 'student_id' not in data:
         return HttpResponseBadRequest("Need to include a reference to 'student_id' in the json object")
 
-    course = Course.objects.filter(name=course_name)
-    if len(course) != 1:
-        return HttpResponseBadRequest("No course exists with that ID")
+    try:
+        course_id = int(course_name)
+        course = Course.objects.filter(id=course_id)
+        if len(course) != 1:
+            return HttpResponseBadRequest("No course exists with that ID")
+    except:
+        course = Course.objects.filter(name=course_name)
+        if len(course) != 1:
+            return HttpResponseBadRequest("No course exists with that name")
     course = course[0]
 
-    problem = Problem.objects.filter(name=problem_name)
-    if len(problem) != 1:
-        return HttpResponseBadRequest("No problem exists with that ID")
+    try:
+        problem_id = int(problem_name)
+        problem = Problem.objects.filter(id=problem_id)
+        if len(problem) != 1:
+            return HttpResponseBadRequest("No problem exists with that ID")
+    except:
+        problem = Problem.objects.filter(name=problem_name)
+        if len(problem) != 1:
+            return HttpResponseBadRequest("No problem exists with that name")
     problem = problem[0]
 
     student = Student.objects.filter(name=data["student_id"])
