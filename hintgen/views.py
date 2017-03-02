@@ -141,7 +141,7 @@ def hint(request, course_id, problem_id):
     second_half = [ "was_lincoln_alive", "get_extra_bagel", "go_to_gym", 
                     "one_to_n", "reduce_to_positive", "any_first_chars",
                     "second_largest", "last_index" ]
-    if (data["problem"].name in first_half and data["student"].condition == "hints_first") or
+    if (data["problem"].name in first_half and data["student"].condition == "hints_first") or \
         (data["problem"].name in second_half and data["student"].condition == "hints_second"):
         code_state = get_hint(code_state)
         hint_message = code_state.hint.message.replace("\n", "<br>").replace("    ", "&nbsp;&nbsp;&nbsp;&nbsp;").replace("\t", "&nbsp;&nbsp;&nbsp;&nbsp;").replace("  ", "&nbsp;&nbsp;")
