@@ -147,7 +147,7 @@ def hint(request, course_id, problem_id):
                           "col" : code_state.hint.col, "hint_type" : code_state.hint.level }
     else:
         code_state = run_tests(code_state)
-        result_object = { "hint_message" : "Here's the test case results:\n" + code_state.feedback, 
+        result_object = { "hint_message" : "Here's the test case results:<br>" + code_state.feedback, 
                           "line" : 1, "col" : 1, "hint_type" : "feedback" }
     return HttpResponse(json.dumps(result_object))
 
