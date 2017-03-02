@@ -103,7 +103,8 @@ def feedback(request, course_id, problem_id):
                              student=data["student"], count=1)
 
     code_state = run_tests(code_state)
-    result_object = { "score" : code_state.score, "feedback" : code_state.feedback }
+    test_results = code_state.feedback.replace("\n", "<br>").replace("    ", "&nbsp;&nbsp;&nbsp;&nbsp;").replace("\t", "&nbsp;&nbsp;&nbsp;&nbsp;").replace("  ", "&nbsp;&nbsp;")
+    result_object = { "score" : code_state.score, "feedback" : test_results }
     return HttpResponse(json.dumps(result_object))
 
 """
@@ -143,11 +144,13 @@ def hint(request, course_id, problem_id):
     if (data["problem"].name in first_half and data["student"].condition == "hints_first") or
         (data["problem"].name in second_half and data["student"].condition == "hints_second"):
         code_state = get_hint(code_state)
-        result_object = { "hint_message" : code_state.hint.message, "line" : code_state.hint.line,
+        hint_message = code_state.hint.message.replace("\n", "<br>").replace("    ", "&nbsp;&nbsp;&nbsp;&nbsp;").replace("\t", "&nbsp;&nbsp;&nbsp;&nbsp;").replace("  ", "&nbsp;&nbsp;")
+        result_object = { "hint_message" : hint_message, "line" : code_state.hint.line,
                           "col" : code_state.hint.col, "hint_type" : code_state.hint.level }
     else:
         code_state = run_tests(code_state)
-        result_object = { "hint_message" : "Here's the test case results:<br>" + code_state.feedback, 
+        test_results = code_state.feedback.replace("\n", "<br>").replace("    ", "&nbsp;&nbsp;&nbsp;&nbsp;").replace("\t", "&nbsp;&nbsp;&nbsp;&nbsp;").replace("  ", "&nbsp;&nbsp;")
+        result_object = { "hint_message" : "Here's the test case results:<br>" + test_results, 
                           "line" : 1, "col" : 1, "hint_type" : "feedback" }
     return HttpResponse(json.dumps(result_object))
 
