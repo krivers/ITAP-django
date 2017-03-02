@@ -70,6 +70,12 @@ def unpack_code_json(request, course_name, problem_name):
     else:
         student = student[0]
 
+        if student.condition not in ["hints_first", "hints_second"]:
+            condition = "hints_first" if random.random() < 0.5 else "hints_second"
+            student.condition = condition
+            student.save()
+
+
     data["course"] = course
     data["problem"] = problem
     data["student"] = student

@@ -29,7 +29,7 @@ class CourseAdmin(admin.ModelAdmin):
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('course', 'condition', 'id')
+    list_display = ('course', 'name', 'condition', 'id')
     inlines = [
         SourceStateInline,
     ]
