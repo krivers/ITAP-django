@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseBadRequest
-import json
+import json, random
 from .models import *
 from .getHint import get_hint, run_tests
 
@@ -58,11 +58,15 @@ def unpack_code_json(request, course_name, problem_name):
     student = Student.objects.filter(name=data["student_id"])
     if len(student) == 0:
         # We haven't seen this student before, but it's okay; we can add them
-        student = Student(course=course, name=data["student_id"])
+
+        # SORRY HARDCODED STUDY STUFF
+        condition = "hints_first" if random.random() < 0.5 else "hints_second"
+
+        student = Student(course=course, name=data["student_id"], condition=condition)
         student.save()
     elif len(student) > 1:
         # Multiple students with the same name! Uh oh.
-        return HttpResponseBadRequest("Could not disambiguate student ID; please modify database")
+        return HttpResponseBadRequest("Could not disambiguate student name; please modify database")
     else:
         student = student[0]
 
@@ -129,9 +133,22 @@ def hint(request, course_id, problem_id):
     code_state = SourceState(code=data["code"], problem=data["problem"], 
                              student=data["student"], count=1)
 
-    code_state = get_hint(code_state)
-    result_object = { "hint_message" : code_state.hint.message, "line" : code_state.hint.line,
-                      "col" : code_state.hint.col, "hint_type" : code_state.hint.level }
+    # Some terrible hard coding for the Spring '17 study. Sorry!
+    first_half = [ "has_two_digits", "is_leap_month", "wear_a_coat", 
+                  "multiply_numbers", "sum_of_odd_digits", "any_divisible",
+                  "has_balanced_parentheses", "find_the_circle" ]
+    second_half = [ "was_lincoln_alive", "get_extra_bagel", "go_to_gym", 
+                    "one_to_n", "reduce_to_positive", "any_first_chars",
+                    "second_largest", "last_index" ]
+    if (data["problem"].name in first_half and data["student"].condition == "hints_first") or
+        (data["problem"].name in second_half and data["student"].condition == "hints_second"):
+        code_state = get_hint(code_state)
+        result_object = { "hint_message" : code_state.hint.message, "line" : code_state.hint.line,
+                          "col" : code_state.hint.col, "hint_type" : code_state.hint.level }
+    else:
+        code_state = run_tests(code_state)
+        result_object = { "hint_message" : "Here's the test case results:\n" + code_state.feedback, 
+                          "line" : 1, "col" : 1, "hint_type" : "feedback" }
     return HttpResponse(json.dumps(result_object))
 
 def unpack_problem_json(request):
