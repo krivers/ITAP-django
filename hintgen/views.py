@@ -21,6 +21,92 @@ response = c.post('/hintgen/hint/' + str(course_id) + '/' + str(problem_id) + '/
 def index(request):
     return HttpResponse("Hello, world. You've reached the hint generation index!")
 
+def check_work(request, course_id):
+    data = unpack_student_json(request, course_id)
+
+    if isinstance(data, HttpResponse):
+        return data
+    
+    problems_attempted = 0
+    problems_solved = 0
+    time_spent = 0
+
+    # Find the number of problems attempted and solved by the student
+    course_problems = Problem.objects.filter(courses__in=[data["course"]])
+    for problem in course_problems:
+        student_submissions = SourceState.objects.filter(student=data["student"], problem=problem)
+        if len(student_submissions) > 0:
+            problems_attempted += 1
+        student_solves = SourceState.objects.filter(student=data["student"], problem=problem, score=1.0)
+        if len(student_solves) > 0:
+            problems_solved += 1
+
+    # Find the amount of time spent by the student
+    all_student_submissions = SourceState.objects.filter(student=data["student"])
+    ordered_submissions = SourceState.objects.order_by('timestamp')
+    time_cutoff = 60*10 # ten minutes
+    for i in range(1, len(ordered_submissions)):
+        time_diff = (ordered_submissions[i].timestamp - 
+                     ordered_submissions[i-1].timestamp).total_seconds()
+        if time_diff > time_cutoff:
+            time_spent += time_cutoff
+        else:
+            time_spent += time_diff
+
+    if problems_solved >= 25:
+        message = "You have solved all the problems; you're done!"
+    elif time_spent >= 60*60*2:
+        message = "You have spent at least two hours in the system; you're done!"
+    else:
+        message = "You have not spent at least two hours or completed all the problems yet. Keep working!"
+
+    full_message = "<p><b>" + message + "</b></p>"
+    full_message += "<p><b>Problems Solved:</b> " + str(problems_solved) + "/25</p>"
+    full_message += "<p><b>Problems Attempted:</b> " + str(problems_attempted) + "/25</p>"
+    full_message += "<p><b>Time Spent:</b> " + str(time_spent//60) + " minutes</p>"
+    return HttpResponse(full_message)
+
+def unpack_student_json(request, course_name):
+    data = request.POST
+    if 'student_id' not in data:
+        return HttpResponseBadRequest("Need to include a reference to 'student_id' in the json object")
+
+    try:
+        course_id = int(course_name)
+        course = Course.objects.filter(id=course_id)
+        if len(course) != 1:
+            return HttpResponseBadRequest("No course exists with that ID")
+    except:
+        course = Course.objects.filter(name=course_name)
+        if len(course) != 1:
+            return HttpResponseBadRequest("No course exists with that name")
+    course = course[0]
+
+    student = Student.objects.filter(name=data["student_id"])
+    if len(student) == 0:
+        # We haven't seen this student before, but it's okay; we can add them
+
+        # SORRY HARDCODED STUDY STUFF
+        condition = "hints_first" if random.random() < 0.5 else "hints_second"
+
+        student = Student(course=course, name=data["student_id"], condition=condition)
+        student.save()
+    elif len(student) > 1:
+        # Multiple students with the same name! Uh oh.
+        return HttpResponseBadRequest("Could not disambiguate student name; please modify database")
+    else:
+        student = student[0]
+
+        if student.condition not in ["hints_first", "hints_second"]:
+            condition = "hints_first" if random.random() < 0.5 else "hints_second"
+            student.condition = condition
+            student.save()
+
+
+    data["course"] = course
+    data["student"] = student
+    return data
+
 def unpack_code_json(request, course_name, problem_name):
     # request_body = request.body.decode('utf-8')
     # if len(request_body) == 0:
