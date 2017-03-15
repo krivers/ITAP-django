@@ -40,6 +40,7 @@ def textToFunction(s):
 	tmpFile = "tmp" + str(random.randint(0,100000))
 	tmpPath = TEST_PATH + "tmp"
 	tmpFull = tmpPath + "/" + tmpFile
+	tmpCache = tmpPath + "/" + "__pycache__" + "/" + tmpFile
 	try:
 		f = open(tmpFull + ".py", "w")
 	except:
@@ -64,6 +65,8 @@ def textToFunction(s):
 		os.remove(tmpFull + ".py")
 	if os.path.exists(tmpFull + ".pyc"):
 		os.remove(tmpFull + ".pyc")
+	if os.path.exists(tmpCache + ".cpython-35.pyc"): # TODO- make this work for all versions
+		os.remove(tmpCache + ".cpython-35.pyc")
 	if failed:
 		s.feedback = "ERROR: could not load function, possibly due to compiler error in instructorFunctions"
 		return None
