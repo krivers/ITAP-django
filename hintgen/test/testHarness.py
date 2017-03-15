@@ -65,8 +65,10 @@ def textToFunction(s):
 		os.remove(tmpFull + ".py")
 	if os.path.exists(tmpFull + ".pyc"):
 		os.remove(tmpFull + ".pyc")
-	if os.path.exists(tmpCache + ".cpython-35.pyc"): # TODO- make this work for all versions
-		os.remove(tmpCache + ".cpython-35.pyc")
+	for version in range(10): # Python 3 caches in a separate folder and includes the version number
+		name = tmpCache + ".cpython-3" + str(version) + ".pyc"
+		if os.path.exists(name):
+			os.remove(name)
 	if failed:
 		s.feedback = "ERROR: could not load function, possibly due to compiler error in instructorFunctions"
 		return None
