@@ -279,10 +279,14 @@ def generateHintText(hint_level, sourceState, bestChange, bestCode):
 			log("getSyntaxHint\tgenerateHintText\tCouldn't parse: " + str(e), "bug")
 			hint = "Sorry, an error occurred."
 		hint += "\nIf you need more help, ask for feedback again."
-	elif hint_level == "syntax_half_steps" and len(bestChange)//2 > 1:
+	elif hint_level == "syntax_half_steps":
+		if len(bestChange)//2 > 1:
+			numChanges = len(bestChange)//2
+		else:
+			numChanges = len(bestChange)
 		# include half of the edits
 		hint = "To help your code parse, make the following changes: \n"
-		for i in range(len(bestChange)//2):
+		for i in range(numChanges):
 			hint += generateEditHint(bestChange[i]) + "\n"
 		hint += "\nIf you need more help, ask for feedback again."
 	elif hint_level == "syntax_solution":
