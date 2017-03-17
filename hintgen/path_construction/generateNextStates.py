@@ -54,11 +54,11 @@ def desirability(s, n, g):
 	score += 1 * c
 
 	# Forth: minimize the distance from the next state to the final state
-	if n != g and not hasattr(n, "goalDist"):
-		n.goalDist = distance(n, g)[0]
-	goalDist = n.goalDist if n != g else 0
-	d = 1 - goalDist
-	n.nearGoal = d
+	#if n != g and not hasattr(n, "goalDist"):
+	#	n.goalDist = distance(n, g)[0]
+	#goalDist = n.goalDist if n != g else 0
+	#d = 1 - goalDist
+	#n.nearGoal = d
 	#score += 2 * d
 
 	score /= 7.0
