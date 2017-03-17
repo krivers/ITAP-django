@@ -32,6 +32,16 @@ def checkCopy(f, input):
 	f(*cp)
 	return cp == input
 
+def load_file(tmpFile, tmpFull):
+	failed = False
+	# Then try to load the function
+	try:
+		mod = imp.load_source(tmpFile, tmpFull + ".py")
+	except Exception as e:
+		mod = None
+		failed = True
+	return mod, failed
+
 def textToFunction(s):
 	if s.loadedFun != None:
 		return s.loadedFun
@@ -53,12 +63,21 @@ def textToFunction(s):
 	f.write(s.code)
 	f.close()
 
-	failed = False
-	# Then try to load the function
-	try:
-		mod = imp.load_source(tmpFile, tmpFull + ".py")
-	except Exception as e:
-		failed = True
+	# Try loading the file in a timed thread in case the file calls infinitely-looping code
+	p = multiprocessing.Process(target=load_file, args=(tmpFile, tmpFull))
+	result = run_in_timer(p, 0.1)
+	if result != "Success":
+		log("testHarness\ttextToFunction\tTimer problem: " + result + "\n" + s.code, "bug")
+		s.feedback = result
+		return None
+	else:
+		out = sys.stdout
+		err = sys.stderr
+		sys.stdout = io.StringIO()
+		sys.stderr = io.StringIO()
+		mod, failed = load_file(tmpFile, tmpFull)
+		sys.stdout = out
+		sys.stderr = err
 
 	# Clean up the extra files
 	if os.path.exists(tmpFull + ".py"):
@@ -69,6 +88,7 @@ def textToFunction(s):
 		name = tmpCache + ".cpython-3" + str(version) + ".pyc"
 		if os.path.exists(name):
 			os.remove(name)
+	
 	if failed:
 		s.feedback = "ERROR: could not load function, possibly due to compiler error in instructorFunctions"
 		return None
@@ -76,12 +96,12 @@ def textToFunction(s):
 	# Load the resulting function from the file. It will have references to all necessary helpers
 	if hasattr(mod, s.problem.name):
 		loaded = getattr(mod, s.problem.name)
+		s.loadedFun = loaded
 	else:
 		s.feedback = "ERROR: could not find required function in code"
 		return None
 
-	s.loadedFun = loaded
-	return loaded
+	return s.loadedFun
 
 def __genericTest__(f, input, output):
 	errors = []
@@ -126,63 +146,75 @@ def runFunction(s, tests, score, feedback=None):
 			for j in range(len(s)):
 				feedback[i*msg_length + j] = ord(s[j]) # add the string into the array
 
-def score(s, tests, returnFeedback=False):
-	# Note that now, infinite loops will break all test cases that come after that. We're OK with this as long as we order test cases properly.
-	if not hasattr(s, "loadedFun"):
-		s.loadedFun = None
-		s.loadedFun = textToFunction(s)
-	f = s.loadedFun
-	if f == None:
-		return (0, s.feedback) if returnFeedback else 0
+def run_in_timer(proc, timerTime):
 	global done
-	score = 0
 	out = sys.stdout
 	err = sys.stderr
 	sys.stdout = io.StringIO()
 	sys.stderr = io.StringIO()
-	timer = threading.Timer(1, timerDone)
+	timer = threading.Timer(timerTime, timerDone)
 	timeout = False
 	try:
-		score = multiprocessing.Value(ctypes.c_float, 0.0, lock=False)
-		if returnFeedback:
-			# Allocate 250 chars for each feedback line
-			feedback = multiprocessing.Array(ctypes.c_int, msg_length * len(tests), lock=False)
-			p = multiprocessing.Process(target=runFunction, args=(s, tests, score, feedback))
-		else:
-			p = multiprocessing.Process(target=runFunction, args=(s, tests, score))
-		p.start()
+		proc.start()
 		timer.start()
-		while (p.is_alive()) and (not done):
+		while (proc.is_alive()) and (not done):
 			continue
 		timer.cancel()
 		# If the process is still running, kill it
-		if p.is_alive():
+		if proc.is_alive():
 			timeout = True
+			#log("testHarness\tscore\tInfinite loop?", "bug")
 			try:
-				p.terminate()
+				proc.terminate()
 				time.sleep(0.01)
-				if p.is_alive():
-					os.system('kill -9 ' + str(p.pid))
+				if proc.is_alive():
+					os.system('kill -9 ' + str(proc.pid))
 			except:
 				log("testHarness\tscore\tThread is still alive!", "bug")
-			while p.is_alive():
+			while proc.is_alive():
 				time.sleep(0.01)
 		sys.stdout = out
 		sys.stderr = err
 		done = False
 	except Exception as e:
 		log("testHarness\tscore\tBroken process: " + str(e), "bug")
-		return (0, "Broken Test Process") if returnFeedback else 0
+		return "Broken Process"
+	if timeout:
+		return "Infinite loop! Code timed out after " + str(timerTime) + " seconds"
+	else:
+		return "Success"
+
+def score(s, tests, returnFeedback=False):
+	# Note that now, infinite loops will break all test cases that come after that. We're OK with this as long as we order test cases properly.
+	if not hasattr(s, "loadedFun"):
+		s.loadedFun = None
+		s.loadedFun = textToFunction(s)
+	f = s.loadedFun
+
+	if f == None:
+		return (0, s.feedback) if returnFeedback else 0
+
+	score = multiprocessing.Value(ctypes.c_float, 0.0, lock=False)
 	if returnFeedback:
-		if timeout:
-			msg = "Infinite loop! Code timed out after 1 second"
-		else:
+		# Allocate 250 chars for each feedback line
+		feedback = multiprocessing.Array(ctypes.c_int, msg_length * len(tests), lock=False)
+		p = multiprocessing.Process(target=runFunction, args=(s, tests, score, feedback))
+	else:
+		p = multiprocessing.Process(target=runFunction, args=(s, tests, score))
+	
+	test_result = run_in_timer(p, 0.1)
+	if test_result != "Success":
+		log("testHarness\tscore\tTimer problem: " + test_result, "bug")
+		result = 0
+		msg = test_result
+	else:
+		if returnFeedback:
 			msg = ""
 			for i in range(len(tests)):
 				j = 0
 				while j < msg_length and feedback[i*msg_length + j] != 0:
 					msg += chr(int(feedback[i*msg_length + j]))
 					j += 1
-	result = score.value / len(tests)
+		result = score.value / len(tests)
 	return (result, msg) if returnFeedback else result
 
