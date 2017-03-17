@@ -575,11 +575,12 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			if newOldTree != None:
 				replacedVariables.append(cv.oldSubtree.variableGlobalId)
 				cv.oldSubtree = newOldTree
-				cv.newSubtree.global_id = cv.oldSubtree.global_id # remap the location for future changes
-				if hasattr(cv.newSubtree, "loadedVariable"):
-					delattr(cv.newSubtree, "loadedVariable")
-				if hasattr(cv.newSubtree, "variableGlobalId"):
-					delattr(cv.newSubtree, "variableGlobalId")
+				if cv.newSubtree != None:
+					cv.newSubtree.global_id = cv.oldSubtree.global_id # remap the location for future changes
+					if hasattr(cv.newSubtree, "loadedVariable"):
+						delattr(cv.newSubtree, "loadedVariable")
+					if hasattr(cv.newSubtree, "variableGlobalId"):
+						delattr(cv.newSubtree, "variableGlobalId")
 			else:
 				log("Individualize\tcouldn't find variable in original: " + printFunction(cv.oldSubtree, 0) + \
 						  "\t" + printFunction(cv.start, 0) + "\t" + printFunction(updatedOrig, 0), "bug")
