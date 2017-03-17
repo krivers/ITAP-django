@@ -480,9 +480,11 @@ def conditionalSpecialFunction(cv, orig):
 		# tree must be a boolean operation combining multiple conditionals
 		treeTests = cv.oldSubtree.values
 		treeStmts = []
-		for test in treeTests:
-			tmpCv = ChangeVector(generatePathToId(orig, test.global_id), 0, 1)
-			treeStmts.append(tmpCv.traverseTree(orig))
+		for i in range(len(treeTests)):
+			test = treeTests[i]
+			tmpCv = ChangeVector(generatePathToId(orig, test.global_id)[1:], 0, 1)
+			newTest = tmpCv.traverseTree(orig)
+			treeStmts.append(newTest)
 		iToKeep = -1
 		for i in range(len(treeStmts)):
 			if compareASTs(treeStmts[i], cv.newSubtree, checkEquality=True) == 0:
@@ -495,12 +497,17 @@ def conditionalSpecialFunction(cv, orig):
 				if i != iToKeep:
 					tmp = DeleteVector(generatePathToId(orig, treeStmts[i].global_id), treeStmts[i], None, start=orig)
 					newCV.append(tmp)
-		else:
+		elif hasattr(treeStmts[0], "test"):
 			# otherwise, edit the topmost conditional's test and delete the others
 			newCV.append(ChangeVector(generatePathToId(orig, treeStmts[0].test.global_id), treeStmts[i].test, cv.newSubtree, start=orig))
 			for i in range(1, len(treeStmts)):
 				tmp = DeleteVector(generatePathToId(orig, treeStmts[i].global_id), treeStmts[i], None, start=orig)
 				newCV.append(tmp)
+		else:
+			log("individualize\tconditionalSpecialFunctions\t\n" + str(cv), "bug")
+			log("individualize\tconditionalSpecialFunctions\t\n" + printFunction(cv.start) + "\n" + printFunction(orig), "bug")
+			for stmt in treeStmts:
+				log("individualize\tconditionalSpecialFunctions\tWeird combined conditional: " + printFunction(stmt), "bug")
 		if len(newCV) == 1:
 			return newCV[0]
 		else:
