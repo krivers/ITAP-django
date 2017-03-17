@@ -401,7 +401,7 @@ def get_hint(source_state, hintLevel=-1):
 			edit = mapEdit(used_state.tree, used_state.orig_tree, edit)
 			if len(edit) == 0:
 				if next_state.next != None:
-					next_state = next_state.next
+					used_state = next_state
 					continue
 			hint = formatHints(used_state, edit, hint_level, used_state.orig_tree) # generate the right level of hint
 			source_state.hint = hint
