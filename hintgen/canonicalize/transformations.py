@@ -199,10 +199,10 @@ def individualizeVariables(a, variablePairs, idNum):
 			variablePairs[a.targets[0].id] = name
 	elif type(a) == ast.arguments:
 		for arg in a.args:
-			if type(arg) == ast.Name:
-				name = "_arg_" + arg.id + "_" + str(idNum[0])
-				variablePairs[arg.id] = name
-				arg.id = variablePairs[arg.id]
+			if type(arg) == ast.arg:
+				name = "_arg_" + arg.arg + "_" + str(idNum[0])
+				variablePairs[arg.arg] = name
+				arg.arg = variablePairs[arg.arg]
 		return
 	elif type(a) == ast.Call:
 		if type(a.func) == ast.Name:
