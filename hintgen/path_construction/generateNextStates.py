@@ -296,7 +296,7 @@ def optimizeGoal(s, changes, states, goals):
 					nextLevel.append(Branch(newChanges, branch.next[i+1:], newState))
 		treeLevel = nextLevel
 
-	if s.goal.id == currentGoal.id:
+	if s.goal.code == currentGoal.code:
 		return allChanges # optimize so we don't need to do the power set twice
 	else:
 		s.goal, s.goalDist = currentGoal, currentDiff # otherwise, put in the new goal
