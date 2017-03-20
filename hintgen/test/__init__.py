@@ -9,7 +9,12 @@ loaded_pairs = { } # Keep track of pairs for efficiency
 def test(s, forceRetest=False):
 	"""A method for testing solution states, which returns a number between
 		0 (totally wrong) and 1 (correct)"""
-	if (s.score != None and s.feedback != "") and (not forceRetest):
+	if forceRetest:
+		if hasattr(s, "loadedFun"):
+			del s.loadedFun
+		s.score = None
+		s.feedback = ""
+	if (s.score != None and s.feedback != ""):
 		return s
 
 	if s.tree != None:
