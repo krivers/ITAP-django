@@ -74,6 +74,12 @@ WSGI_APPLICATION = 'testsite.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/1.10/ref/settings/#databases
 
+# NOTE: when setting up the database, run the following command to ensure correct performance:
+"""alter table hintgen_state modify
+    code longtext
+        character set utf8
+        collate utf8_bin;"""
+
 DATABASES = {
     'default': {
        # 'ENGINE': 'django.db.backends.sqlite3',
