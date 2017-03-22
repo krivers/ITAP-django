@@ -226,7 +226,6 @@ def generate_anon_state(cleaned_state, given_names):
 			anon_state = AnonState(code=anon_code, problem=cleaned_state.problem, 
 								   score=cleaned_state.score, count=1,
 								   feedback=cleaned_state.feedback) 
-			anon_state.tree_source = tree_to_str(anon_tree)
 			anon_state.treeWeight = diffAsts.getWeight(anon_tree)
 		else:
 			if len(prior_anon) > 1:
@@ -234,6 +233,7 @@ def generate_anon_state(cleaned_state, given_names):
 			anon_state = prior_anon[0]
 			anon_state.count += 1
 		anon_state.tree = anon_tree
+		anon_state.tree_source = tree_to_str(anon_tree)
 		anon_state.orig_tree = orig_tree
 		anon_state.orig_tree_source = tree_to_str(orig_tree)
 	return anon_state
