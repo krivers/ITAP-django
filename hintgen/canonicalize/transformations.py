@@ -111,11 +111,12 @@ def anonymizeStatementNames(a, globalMap, scopeName):
 	varMap = { }
 	varMap.update(globalMap)
 	varMap.update(localMap)
+	randomCounter = [0]
 	if type(a) == ast.FunctionDef:
 		for arg in a.args.args:
-			updateVariableNames(arg, varMap, scopeName, [0])
+			updateVariableNames(arg, varMap, scopeName, randomCounter)
 	for line in a.body:
-		updateVariableNames(line, varMap, scopeName, [0])
+		updateVariableNames(line, varMap, scopeName, randomCounter)
 
 def anonymizeNames(a, namesToKeep):
 	"""Anonymize all of variables/names that occur in the given AST"""
