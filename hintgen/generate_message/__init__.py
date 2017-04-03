@@ -43,7 +43,8 @@ def getBottomLine(tree):
 			return tree.lineno
 		return getBottomLine(tree.targets[-1])
 	elif type(tree) in [ast.Assign, ast.AugAssign, ast.Expr,
-						ast.Attribute, ast.Subscript, ast.Index, ast.keyword]:
+						ast.Attribute, ast.Subscript, ast.Index, 
+						ast.Starred, ast.keyword]:
 		return getBottomLine(tree.value)
 	elif type(tree) in [ast.For, ast.While, ast.If]:
 		if len(tree.orelse) == 0:

@@ -300,7 +300,8 @@ def printFunction(a, indent=0):
 		elif len(a.elts) == 1:
 			s = s[:-1] # don't get rid of the comma! It clarifies that this is a tuple
 		s += ")"
-
+	elif t == ast.Starred:
+		s += "*" + printFunction(a.value, indent)
 	elif t == ast.Ellipsis:
 		s += "..."
 	elif t == ast.Slice:
@@ -399,7 +400,8 @@ def formatContext(trace, verb):
 									"Attribute"				: ("attribute value"),
 									"Subscript"				: ("outer part of the subscript"),
 									"Index"					: ("inner part of the subscript"),
-									"Keyword"				: ("right side of the keyword")					},
+									"Keyword"				: ("right side of the keyword"),
+									"Starred"				: ("value of the starred expression")			},
 			"values"			: {	"Print"					: ("print statement"),
 									"Boolean Operation"		: ("boolean operation"),
 									"Dict"					: ("values of the dictionary")					},

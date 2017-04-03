@@ -33,7 +33,7 @@ def getWeight(a, countTokens=True):
 					sumWeight(a.keywords, countTokens=countTokens) + \
 					getWeight(a.body, countTokens=countTokens) + \
 					getWeight(a.decorator_list, countTokens=countTokens)
-		elif type(a) in [ast.Return, ast.Yield, ast.Attribute]:
+		elif type(a) in [ast.Return, ast.Yield, ast.Attribute, ast.Starred]:
 			# add 1 for action name
 			weight = 1 + getWeight(a.value, countTokens=countTokens)
 		elif type(a) == ast.Delete: # add 1 for del

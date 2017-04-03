@@ -437,7 +437,7 @@ astNames = {
 		ast.NameConstant : "Name Constant",
 		ast.Attribute : "Attribute",
 		ast.Subscript : "Subscript", ast.Name : "Name", ast.List : "List",
-		ast.Tuple : "Tuple",
+		ast.Tuple : "Tuple", ast.Starred : "Starred",
 
 		ast.Load : "Load", ast.Store : "Store", ast.Del : "Delete",
 		ast.AugLoad : "AugLoad", ast.AugStore : "AugStore",

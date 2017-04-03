@@ -522,7 +522,8 @@ def couldCrash(a):
 		if a.step != None and eventualType(a.step) != int:
 			return True
 	elif type(a) in [ast.Raise, ast.Assert, ast.Pass, ast.Break, \
-					 ast.Continue, ast.Yield, ast.Attribute, ast.ExtSlice, ast.Index]:
+					 ast.Continue, ast.Yield, ast.Attribute, ast.ExtSlice, ast.Index, \
+					 ast.Starred]:
 		# All of these cases can definitely crash.
 		return True
 	return False
@@ -693,6 +694,8 @@ def eventualType(a):
 		return None
 	elif type(a) == ast.Tuple:
 		return tuple
+	elif type(a) == ast.Starred:
+		return None # too complicated
 	else:
 		log("astTools\teventualType\tUnimplemented type " + str(type(a)), "bug")
 		return None
@@ -759,7 +762,7 @@ def compareASTs(a, b, checkEquality=False):
 					ast.Yield, ast.Lambda, ast.IfExp, ast.Call, ast.Subscript,
 					ast.Attribute, ast.Dict, ast.List, ast.Tuple,
 					ast.Set, ast.Name, ast.Str, ast.Bytes, ast.Num, 
-					ast.NameConstant, 
+					ast.NameConstant, ast.Starred,
 
 					ast.Ellipsis, ast.Index, ast.Slice, ast.ExtSlice,
 
@@ -850,6 +853,7 @@ def compareASTs(a, b, checkEquality=False):
 				ast.Subscript : ["value", "slice"],
 				ast.List : ["elts"],
 				ast.Tuple : ["elts"],
+				ast.Starred : ["value"],
 
 				ast.Slice : ["lower", "upper", "step"],
 				ast.ExtSlice : ["dims"],
@@ -1014,6 +1018,8 @@ def deepcopy(a):
 		cp = ast.List(deepcopyList(a.elts), a.ctx)
 	elif type(a) == ast.Tuple:
 		cp = ast.Tuple(deepcopyList(a.elts), a.ctx)
+	elif type(a) == ast.Starred:
+		cp = ast.Starred(deepcopy(a.value), a.ctx)
 
 	elif type(a) == ast.Slice:
 		cp = ast.Slice(deepcopy(a.lower), deepcopy(a.upper), deepcopy(a.step))
