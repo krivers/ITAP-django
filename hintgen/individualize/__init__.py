@@ -109,6 +109,19 @@ def mapNames(a, d):
 	if type(a) == ast.FunctionDef:
 		if a.name in d:
 			a.name = d[a.name]
+	elif type(a) == ast.arg:
+		if not hasattr(a, "alreadyMapped"):
+			if a.arg in d:
+				a.arg = d[a.arg]
+				a.alreadyMapped = True
+			else:
+				if isAnonVariable(a.arg): # if it's a variable that won't be getting mapped
+					# How many new vars are there already?
+					num = countNewVarsInD(d)
+					d[a.arg] = "new_var_" + str(num)
+					a.arg = d[a.arg]
+					a.alreadyMapped = True
+		return a
 	elif type(a) == ast.Name:
 		if not hasattr(a, "alreadyMapped"):
 			if a.id in d:
@@ -134,6 +147,10 @@ def createNameMap(a, d=None):
 	if type(a) in [ast.FunctionDef, ast.ClassDef]:
 		if hasattr(a, "originalId") and a.name not in d:
 			d[a.name] = a.originalId
+	elif type(a) == ast.arg:
+		if hasattr(a, "originalId") and a.arg not in d:
+			d[a.arg] = a.originalId
+		return d
 	elif type(a) == ast.Name:
 		if hasattr(a, "originalId") and a.id not in d:
 			d[a.id] = a.originalId
@@ -206,6 +223,8 @@ def basicTypeSpecialFunction(cv):
 			cv.newSubtree = ast.Str(cv.newSubtree)
 		elif cv.path[0] == ('id', 'Name'):
 			cv.newSubtree = ast.Name(cv.newSubtree, cv.oldSubtree.ctx)
+		elif cv.path[0] == ('arg', 'Argument'):
+			cv.newSubtree = ast.arg(cv.newSubtree)
 		elif cv.path[0] == ('value', 'Name Constant'):
 			cv.newSubtree = ast.NameConstant(cv.newSubtree)
 		elif cv.path[0] == ('s', 'Bytes'):
@@ -663,7 +682,7 @@ def mapEdit(canon, orig, edit, nameMap=None):
 		# Sometimes these simplifications result in an opportunity for better change vectors
 		if cv.isReplaceVector() and type(cv.oldSubtree) == type(cv.newSubtree):
 			# But we don't want to undo the work from before! That will lead to infinite loops.
-			if type(cv.oldSubtree) in [ast.NameConstant, ast.Bytes, ast.Str, ast.Num, ast.Name, int, str]:
+			if type(cv.oldSubtree) in [ast.NameConstant, ast.Bytes, ast.Str, ast.Num, ast.Name, ast.arg, int, str]:
 				pass
 			elif type(cv.oldSubtree) == ast.Return and (cv.oldSubtree.value == None or type(cv.oldSubtree.value) == ast.Name):
 				pass
