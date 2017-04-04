@@ -416,7 +416,7 @@ def get_hint(source_state, hintLevel=-1):
 		# Then choose the best path to use
 		anon_distance, _ = diffAsts.distance(anon_state, anon_state.goal, forceReweight=True)
 		canonical_distance, _ = diffAsts.distance(canonical_state, canonical_state.goal, forceReweight=True)
-		if anon_distance >= canonical_distance:
+		if anon_distance <= canonical_distance:
 			used_state = anon_state
 		else:
 			used_state = canonical_state
