@@ -1,4 +1,5 @@
-import copy, ctypes, imp, multiprocessing, os, random, io, sys, threading, time
+import copy, ctypes, multiprocessing, os, random, io, sys, threading, time, ast
+import importlib.util
 from ..tools import log
 from ..paths import TEST_PATH
 
@@ -36,7 +37,9 @@ def load_file(tmpFile, tmpFull):
 	failed = False
 	# Then try to load the function
 	try:
-		mod = imp.load_source(tmpFile, tmpFull + ".py")
+		spec = importlib.util.spec_from_file_location(tmpFile, tmpFull + ".py")
+		mod = importlib.util.module_from_spec(spec)
+		spec.loader.exec_module(mod)
 	except Exception as e:
 		mod = None
 		failed = True
