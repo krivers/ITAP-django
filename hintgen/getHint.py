@@ -3,7 +3,7 @@ from .canonicalize import getAllImports, runGiveIds, anonymizeNames, getCanonica
 from .path_construction import diffAsts, generateNextStates
 from .individualize import mapEdit
 from .generate_message import formatHints
-from .getSyntaxHint import getSyntaxHint
+from .getSyntaxHint import getSyntaxHint, applyChanges
 
 from .test import test
 from .display import printFunction
@@ -12,17 +12,9 @@ from .tools import log, parse_table
 from .paths import LOG_PATH
 
 from .models import *
+from .ChangeVector import *
+from .SyntaxEdit import *
 
-
-def import_code_as_states(f, course_id, problem_name, clear_space=False):
-	# Import a CSV file of code into the database
-
-	# Set up the profiler
-	out = sys.stdout
-	outStream = io.StringIO()
-	sys.stdout = outStream
-	pr = cProfile.Profile()
-	pr.enable()
 def check_repeating_edits(state, allEdits, printedStates):
 	# First check for infinitely-looping edits
 	# If we've seen this exact change before, it's a loop
@@ -131,24 +123,22 @@ def clear_solution_space(problem):
 		problem.solution = starter_state
 		problem.save()
 
+def import_code_as_states(f, course_id, problem_name, clear_space=False, run_profiler=False):
+	if run_profiler:
+		# Set up the profiler
+		out = sys.stdout
+		outStream = io.StringIO()
+		sys.stdout = outStream
+		pr = cProfile.Profile()
+		pr.enable()
+
 	course = Course.objects.get(id=course_id)
 	problem = course.problems.get(name=problem_name)
 
 	if clear_space:
-		old_states = State.objects.filter(problem=problem.id)
-		if len(old_states) > 1:
-			# Clean out the old states
-			starter_code = list(old_states)[0].code
-			log("Deleting " + str(len(old_states)) + " old states...", "bug")
-			old_states.delete()
+		clear_solution_space(problem)
 
-			# But save the instructor solution!
-			starter_state = SourceState(code=starter_code, problem=problem, count=1, student=Student.objects.get(id=1))
-			starter_state = get_hint(starter_state)
-			starter_state.save()
-			problem.solution = starter_state
-			problem.save()
-
+	# Import a CSV file of code into the database
 	table = parse_table(f)
 	header = table[0]
 	table = table[1:]
@@ -163,18 +153,21 @@ def clear_solution_space(problem):
 			student = Student(course=course, name=student_name)
 			student.save()
 		code = line[header.index("fun")]
-		state = SourceState(code=code, problem=problem, count=1, student=student)
-		state = get_hint(state)
-		state.save()
+		#state = SourceState(code=code, problem=problem, count=1, student=student)
+		#state = get_hint(state)
+		#state.save()
+		results = do_hint_chain(code, student, problem)
+		log(student_name + ": " + str(results[1]), "bug")
 
-	# Check the profiler results
-	sys.stdout = out
-	pr.disable()
-	s = io.StringIO()
-	ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
-	ps.print_stats()
-	with open(LOG_PATH + "profile.log", "w") as f:
-		f.write(outStream.getvalue() + s.getvalue())
+	if run_profiler:
+		# Check the profiler results
+		sys.stdout = out
+		pr.disable()
+		s = io.StringIO()
+		ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
+		ps.print_stats()
+		with open(LOG_PATH + "profile.log", "w") as f:
+			f.write(outStream.getvalue() + s.getvalue())
 	print('\a')
 
 def find_example_solutions(s, goals):
