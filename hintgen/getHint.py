@@ -13,98 +13,6 @@ from .paths import LOG_PATH
 
 from .models import *
 
-# def hintLog(msg, user, problem, code, next=None, goal=None, hint=None):
-# 	nextStr = repr(next) + "\t" if next != None else "\t"
-# 	goalStr = repr(goal) + "\t" if goal != None else "\t"
-# 	hintStr = repr(hint) if hint != None else ""
-# 	log("getHint\t" + repr(msg) + "\t" + repr(user) + "\t" + repr(problem) + "\t" + \
-# 			repr(code) + "\t" + nextStr + goalStr + hintStr + "\n")
-
-# def doHintChain(code, user, problem, interactive=False):
-# 	state = tools.load_state([("id", user + "_1"), ("fun", code)], problem)
-# 	startState = state.deepcopy()
-# 	state.fun = code
-# 	failedTests = True
-# 	stepCount = editCount = chrCount = 0
-# 	cutoff = 60
-# 	printedStates = "************************"
-# 	allEdits = []
-# 	# Keep applying hints until either the state is correct or
-# 	# you've reached the cutoff. The cap is there to cut off infinite loops.
-# 	while stepCount < cutoff:
-# 		stepCount += 1
-# 		printedStates += "State: \n" + state.fun + "\n"
-# 		[hint, location, edit, goal] = getHint(state.fun, 
-# 			user + "_" + str(stepCount), problem, includeLocation=True, 
-# 			returnEdit=True, returnGoal=True, hintLevel=3)
-# 		print hint
-# 		if goal != None:
-# 			printedStates += "Goal: \n" + goal + "\n"
-
-# 		if edit != None and len(edit) > 0:
-# 			# First check for infinitely-looping edits
-# 			printedStates += hint + "\n" + str(edit) + "\n"
-# 			# If we've seen this exact change before, it's a loop
-# 			if isinstance(edit[0], ChangeVector):
-# 				if edit in allEdits:
-# 					s = "REPEATING EDITS"
-# 					log(s + "\n" + printedStates, "bug")
-# 					return s, stepCount, editCount, chrCount
-# 			elif isinstance(edit[0], SyntaxEdit):
-# 				if len(allEdits) > 0:
-# 					current = edit[0]
-# 					prev = allEdits[-1][0]
-# 					# If we're adding and then deleting the same thing, it's a loop
-# 					if current.editType == "-" and prev.editType == "+" and \
-# 						current.line == prev.line and current.col == prev.col and \
-# 						current.text == prev.text and current.newText == prev.newText:
-# 						s = "REPEATING EDITS"
-# 						log(s + "\n" + printedStates, "bug")
-# 						return s, stepCount, editCount, chrCount
-# 			else:
-# 				log("Unknown edit type?" + repr(edit[0]), filename="bug")
-
-# 			if isinstance(edit[0], ChangeVector):
-# 				editCount += path_construction.diffAsts.getChangesWeight(edit, False)
-# 				newTree = state.tree
-# 				for e in edit:
-# 					e.start = newTree
-# 					newTree = e.applyChange()
-
-# 				if newTree == None:
-# 					s = "EDIT BROKE"
-# 					log(s + "\n" + printedStates, "bug")
-# 					return s, stepCount, editCount, chrCount
-# 				newFun = display.printFunction(newTree, 0)
-# 			else: # Fixing a syntax error
-# 				newFun = getSyntaxHint.applyChanges(state.fun, edit)
-# 				chrCount += sum(len(c.text) + len(c.newText) for c in edit)
-
-# 			allEdits.append(edit)
-# 			state = tools.load_state([("id", user + "_" + str(stepCount+1)), ("fun", newFun)], problem)
-# 			state.fun = newFun
-# 		elif state.score != 1:
-# 			s = "NO NEXT STEP"
-# 			log(s + "\n" + printedStates, "bug")
-# 			return s, stepCount, editCount, chrCount
-# 		else: # break out when the score reaches 1
-# 			break
-# 		if interactive:
-# 			raw_input("")
-
-# 	if state.score == 1:
-# 		if stepCount == 1:
-# 			s = "Started Correct"
-# 		else: # Got through the hints! Woo!
-# 			s = "Success"
-# 	else: # These are the bad cases
-# 		if stepCount >= cutoff:
-# 			s = "TOO LONG"
-# 			log(s + "\n" + printedStates, "bug")
-# 		else:
-# 			s = "BROKEN"
-# 			log(s + "\n" + printedStates, "bug")
-# 	return s, stepCount, editCount, chrCount
 
 def import_code_as_states(f, course_id, problem_name, clear_space=False):
 	# Import a CSV file of code into the database
@@ -115,6 +23,113 @@ def import_code_as_states(f, course_id, problem_name, clear_space=False):
 	sys.stdout = outStream
 	pr = cProfile.Profile()
 	pr.enable()
+def check_repeating_edits(state, allEdits, printedStates):
+	# First check for infinitely-looping edits
+	# If we've seen this exact change before, it's a loop
+	if isinstance(state.edit[0], ChangeVector):
+		if state.edit in allEdits:
+			s = "REPEATING EDITS"
+			log(s + "\n" + printedStates, "bug")
+			return s, stepCount, editCount, chrCount
+	elif isinstance(state.edit[0], SyntaxEdit):
+		if len(allEdits) > 0:
+			current = state.edit[0]
+			prev = allEdits[-1][0]
+			if not isinstance(prev, SyntaxEdit):
+				log("getHint\tcheck_repeating_edits\tSyntax hint after semantic hint?\n" + str(allEdits) + "\n" + str(state.edit), "bug")
+				log(printedStates, "bug")
+			else:
+				# If we're adding and then deleting the same thing, it's a loop
+				if current.editType == "-" and prev.editType == "+" and \
+					current.line == prev.line and current.col == prev.col and \
+					current.text == prev.text and current.newText == prev.newText:
+					s = "REPEATING EDITS"
+					log(s + "\n" + printedStates, "bug")
+					return s, stepCount, editCount, chrCount
+	else:
+		log("Unknown edit type?" + repr(state.edit[0]), filename="bug")
+
+def do_hint_chain(code, user, problem, interactive=False):
+	state = SourceState(code=code, problem=problem, count=1, student=user)
+	failedTests = True
+	stepCount = editCount = chrCount = 0
+	cutoff = 40
+	printedStates = "************************"
+	allEdits = []
+	# Keep applying hints until either the state is correct or
+	# you've reached the cutoff. The cap is there to cut off infinite loops.
+	while stepCount < cutoff:
+		stepCount += 1
+		printedStates += "State: \n" + state.code + "\n"
+		state = get_hint(state, hintLevel=3)
+		if state.goal != None:
+			printedStates += "Goal: \n" + state.goal.code + "\n"
+
+		if hasattr(state, "edit") and state.edit != None and len(state.edit) > 0:
+			printedStates += state.hint.message + "\n" + str(state.edit) + "\n"
+
+			repeatingCheck = check_repeating_edits(state, allEdits, printedStates)
+			if repeatingCheck != None:
+				return repeatingCheck
+
+			if isinstance(state.edit[0], ChangeVector):
+				editCount += diffAsts.getChangesWeight(state.edit, False)
+				newTree = state.tree
+				for e in state.edit:
+					e.start = newTree
+					newTree = e.applyChange()
+
+				if newTree == None:
+					s = "EDIT BROKE"
+					log(s + "\n" + printedStates, "bug")
+					return s, stepCount, editCount, chrCount
+				newFun = printFunction(newTree)
+			else: # Fixing a syntax error
+				newFun = applyChanges(state.code, state.edit)
+				chrCount += sum(len(c.text) + len(c.newText) for c in state.edit)
+
+			allEdits.append(state.edit)
+			state = SourceState(code=newFun, problem=problem, count=1, student=user)
+		elif state.score != 1:
+			s = "NO NEXT STEP"
+			log(s + "\n" + printedStates, "bug")
+			log("Scores: " + str(state.score) + "," + str(state.goal.score), "bug")
+			log("Feedback: " + str(state.feedback) + "," + str(state.goal.feedback), "bug")
+			log("DIFF: " + str(diffAsts.diffAsts(state.tree, state.goal.tree)), "bug")
+			return s, stepCount, editCount, chrCount
+		else: # break out when the score reaches 1
+			break
+		if interactive:
+			input("")
+
+	if state.score == 1:
+		if stepCount == 1:
+			s = "Started Correct"
+		else: # Got through the hints! Woo!
+			s = "Success"
+	else: # These are the bad cases
+		if stepCount >= cutoff:
+			s = "TOO LONG"
+			log(s + "\n" + printedStates, "bug")
+		else:
+			s = "BROKEN"
+			log(s + "\n" + printedStates, "bug")
+	return s, stepCount, editCount, chrCount
+
+def clear_solution_space(problem):
+	old_states = State.objects.filter(problem=problem.id)
+	if len(old_states) > 1:
+		# Clean out the old states
+		starter_code = list(old_states)[0].code
+		log("Deleting " + str(len(old_states)) + " old states...", "bug")
+		old_states.delete()
+
+		# But save the instructor solution!
+		starter_state = SourceState(code=starter_code, problem=problem, count=1, student=Student.objects.get(id=1))
+		starter_state = get_hint(starter_state)
+		starter_state.save()
+		problem.solution = starter_state
+		problem.save()
 
 	course = Course.objects.get(id=course_id)
 	problem = course.problems.get(name=problem_name)
