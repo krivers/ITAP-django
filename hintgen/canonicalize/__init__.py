@@ -150,10 +150,13 @@ def checkGlobalIds(a, l):
 def stateDiff(s, funName):
 	checkGlobalIds(s.tree, [])
 	old_score = s.score
+	old_feedback = s.feedback
+	old_code = s.code
 	s = test(s, forceRetest=True)
 	if abs(old_score - s.score) > 0.001:
 		log("canonicalize\tstateDiff\tScore mismatch: " + funName + "," + str(old_score) + "," + str(s.score), "bug")
-		log(s.code, "bug")
+		log(old_feedback + "," + s.feedback, "bug")
+		log(old_code, "bug")
 		log(printFunction(s.tree), "bug")
 		log(printFunction(s.orig_tree), "bug")
 
@@ -199,6 +202,7 @@ def getCanonicalForm(s, given_names=None, argTypes=None):
 	while compareASTs(oldTree, s.tree, checkEquality=True) != 0:
 		oldTree = deepcopy(s.tree)
 		helperFolding(s.tree, s.problem.name)
+		stateDiff(s, "helperFolding")
 		for t in transformations:
 			s.tree = t(s.tree) # modify in place
 			stateDiff(s, str(t))

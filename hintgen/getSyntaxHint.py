@@ -395,6 +395,7 @@ def getSyntaxHint(source_state):
 	firstEdit = bestChange[0]
 	hint = Hint(message=message, level=hint_level, line=firstEdit.line, col=firstEdit.col)
 	hint.save()
+	source_state.edit = bestChange
 	source_state.hint = hint
 	source_state.save()
 	return source_state

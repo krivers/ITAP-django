@@ -207,14 +207,16 @@ def generate_cleaned_state(source_state):
 	elif len(prior_cleaned) == 1:
 		cleaned_state = prior_cleaned[0]
 		cleaned_state.count += 1
+		if cleaned_code != cleaned_state.code:
+			log("getHint\tgenerate_cleaned_state\tCode mismatch: \n" + cleaned_state.code + "\n" + cleaned_code, "bug")
 	else:
 		log("getHint\tgenerate_cleaned_state\tDuplicate code entries in cleaned: " + cleaned_code, "bug")
 	cleaned_state.tree = source_state.tree
-	old_score = source_state.score
 	cleaned_state = test(cleaned_state, forceRetest=True)
-	if cleaned_state.score != old_score:
-		log("getHint\tgenerate_cleaned_state\tScore mismatch: " + str(old_score) + "," + str(cleaned_state.score) + \
-			"\n" + source_state.code + "\n" + cleaned_state.code, "bug")
+	if cleaned_state.score != source_state.score:
+		log("getHint\tgenerate_cleaned_state\tScore mismatch: " + \
+			str(source_state.score) + "," + str(cleaned_state.score) + "\n" + \
+			source_state.code + "\n" + cleaned_state.code, "bug")
 	return cleaned_state
 
 def generate_anon_state(cleaned_state, given_names):
@@ -242,6 +244,11 @@ def generate_anon_state(cleaned_state, given_names):
 			anon_state.count += 1
 		anon_state.tree = anon_tree
 		anon_state.tree_source = tree_to_str(anon_tree)
+		anon_state = test(anon_state, forceRetest=True)
+		if anon_state.score != cleaned_state.score:
+			log("getHint\tgenerate_anon_state\tScore mismatch: " + \
+				str(cleaned_state.score) + "," + str(anon_state.score) + "\n" + \
+				cleaned_state.code + "\n" + anon_state.code, "bug")
 		anon_state.orig_tree = orig_tree
 		anon_state.orig_tree_source = tree_to_str(orig_tree)
 	return anon_state
@@ -267,6 +274,9 @@ def generate_canonical_state(cleaned_state, anon_state, given_names):
 		canonical_state.orig_tree_source = tree_to_str(canonical_state.orig_tree)
 		canonical_state.tree = deepcopy(canonical_state.orig_tree)
 		canonical_state = getCanonicalForm(canonical_state, given_names, args)
+		canonical_state = test(canonical_state, forceRetest=True)
+		if canonical_state.score != cleaned_state.score:
+			log("getHint\tgenerate_canonical_state\tScore mismatch: " + str(cleaned_state.score) + "," + str(canonical_state.score) + "\n" + cleaned_state.code + "\n" + canonical_state.code, "bug")
 		prior_canon = list(CanonicalState.objects.filter(problem=cleaned_state.problem, code=canonical_state.code))
 		if len(prior_canon) == 0:
 			canonical_state.tree_source = tree_to_str(canonical_state.tree)
@@ -431,12 +441,12 @@ def get_hint(source_state, hintLevel=-1):
 
 		while True:
 			if used_state.next == None:
-				log("getHint\tget_hint\tCould not find next state for state " + used_state.id, "bug")
+				log("getHint\tget_hint\tCould not find next state for state " + str(used_state.id), "bug")
 				break
 			next_state = used_state.next
 			if not hasattr(next_state, "tree"):
 				next_state.tree = str_to_tree(next_state.tree_source)
-			if not hasattr(next_state, "orig_tree") and next_state.orig_tree_source!="":
+			if not hasattr(next_state, "orig_tree") and hasattr(next_state, "orig_tree_source") and next_state.orig_tree_source!="":
 				next_state.orig_tree = str_to_tree(next_state.orig_tree_source)
 			edit = diffAsts.diffAsts(used_state.tree, next_state.tree)
 			edit, _ = generateNextStates.updateChangeVectors(edit, used_state.tree, used_state.tree)
@@ -446,7 +456,9 @@ def get_hint(source_state, hintLevel=-1):
 					used_state = next_state
 					continue
 			hint = formatHints(used_state, edit, hint_level, used_state.orig_tree) # generate the right level of hint
+			source_state.edit = edit
 			source_state.hint = hint
+			source_state.goal = used_state.goal
 			break
 
 	# Save all the states!
