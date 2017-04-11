@@ -1002,9 +1002,12 @@ def constantFolding(a):
 			transferMetaData(a, tmp)
 			return tmp
 		if (type(l) in builtInTypes) and (type(r) in builtInTypes):
-			result = astFormat(doCompare(op, l, r))
-			transferMetaData(a, result)
-			return result
+			try:
+				result = astFormat(doCompare(op, l, r))
+				transferMetaData(a, result)
+				return result
+			except:
+				pass
 		# Reduce the expressions when possible!
 		if type(l) == type(r) == ast.BinOp and type(l.op) == type(r.op) and not couldCrash(l) and not couldCrash(r):
 			if type(l.op) == ast.Add:
