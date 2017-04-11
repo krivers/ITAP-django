@@ -1408,8 +1408,11 @@ def copyPropagation(a, liveVars=None, inLoop=False):
 			# With regular statements, just propagate the values
 			elif type(a[i]) in [ast.Return, ast.Delete, ast.Raise, ast.Assert, ast.Expr]:
 				propagateValues(a[i], liveVars)
+			# Breaks and Continues mess everything up
+			elif type(a[i]) in [ast.Break, ast.Continue]:
+				break
 			# These are not affected by this function
-			elif type(a[i]) in [ast.Import, ast.ImportFrom, ast.Global, ast.Pass, ast.Break, ast.Continue]:
+			elif type(a[i]) in [ast.Import, ast.ImportFrom, ast.Global, ast.Pass]:
 				pass
 			else:
 				log("transformations\tcopyPropagation\tNot implemented: " + str(type(a[i])), "bug")
@@ -1419,14 +1422,14 @@ def copyPropagation(a, liveVars=None, inLoop=False):
 		log("transformations\tcopyPropagation\tNot a list: " + str(type(a)), "bug")
 		return a
 
-def deadCodeRemoval(a, liveVars=None, keepPrints=True):
+def deadCodeRemoval(a, liveVars=None, keepPrints=True, inLoop=False):
 	"""Remove any code which will not be reached or used."""
 	"""LiveVars keeps track of the variables that will be necessary"""
 	if liveVars == None:
 		liveVars = set()
 	if type(a) in [ast.Module, ast.FunctionDef]:
 		gid = a.body[0].global_id if len(a.body) > 0 and hasattr(a.body[0], "global_id") else None
-		a.body = deadCodeRemoval(a.body, liveVars=liveVars, keepPrints=keepPrints)
+		a.body = deadCodeRemoval(a.body, liveVars=liveVars, keepPrints=keepPrints, inLoop=inLoop)
 		if len(a.body) == 0:
 			a.body = [ast.Pass(removedLines=True)] if gid == None else [ast.Pass(removedLines=True, global_id=gid)]
 		return a
@@ -1442,7 +1445,7 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True):
 			if t in [ast.FunctionDef, ast.ClassDef]:
 				newLiveVars = set()
 				gid = a[i].body[0].global_id if len(a[i].body) > 0 and hasattr(a[i].body[0], "global_id") else None
-				a[i] = deadCodeRemoval(a[i], liveVars=newLiveVars, keepPrints=keepPrints)
+				a[i] = deadCodeRemoval(a[i], liveVars=newLiveVars, keepPrints=keepPrints, inLoop=inLoop)
 				liveVars |= newLiveVars
 				# Empty functions are useless!
 				if len(a[i].body) == 0:
@@ -1510,8 +1513,8 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True):
 				# We need to make ALL variables in the loop live, since they update continuously
 				liveVars |= set(allVariableNamesUsed(stmt))
 				gid = stmt.body[0].global_id if len(stmt.body) > 0 and hasattr(stmt.body[0], "global_id") else None
-				stmt.body = deadCodeRemoval(stmt.body, copy.deepcopy(liveVars), keepPrints=keepPrints)
-				stmt.orelse = deadCodeRemoval(stmt.orelse, copy.deepcopy(liveVars), keepPrints=keepPrints)
+				stmt.body = deadCodeRemoval(stmt.body, copy.deepcopy(liveVars), keepPrints=keepPrints, inLoop=True)
+				stmt.orelse = deadCodeRemoval(stmt.orelse, copy.deepcopy(liveVars), keepPrints=keepPrints, inLoop=inLoop)
 				# If the body is empty and we don't need the target, get rid of it!
 				if len(stmt.body) == 0:
 					for name in targetNames:
@@ -1541,8 +1544,8 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True):
 
 				# We need to make ALL variables in the loop live, since they update continuously
 				liveVars |= set(allVariableNamesUsed(stmt))
-				stmt.body = deadCodeRemoval(stmt.body, copy.deepcopy(liveVars), keepPrints=keepPrints)
-				stmt.orelse = deadCodeRemoval(stmt.orelse, copy.deepcopy(liveVars), keepPrints=keepPrints)
+				stmt.body = deadCodeRemoval(stmt.body, copy.deepcopy(liveVars), keepPrints=keepPrints, inLoop=True)
+				stmt.orelse = deadCodeRemoval(stmt.orelse, copy.deepcopy(liveVars), keepPrints=keepPrints, inLoop=inLoop)
 				# If the body is empty, get rid of it!
 				if len(stmt.body) == 0:
 					if couldCrash(stmt.test) or containsTokenStepString(stmt.test):
@@ -1564,8 +1567,8 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True):
 				# For if statements, see if you can shorten things
 				liveVars1 = copy.deepcopy(liveVars)
 				liveVars2 = copy.deepcopy(liveVars)
-				stmt.body = deadCodeRemoval(stmt.body, liveVars1, keepPrints=keepPrints)
-				stmt.orelse = deadCodeRemoval(stmt.orelse, liveVars2, keepPrints=keepPrints)
+				stmt.body = deadCodeRemoval(stmt.body, liveVars1, keepPrints=keepPrints, inLoop=inLoop)
+				stmt.orelse = deadCodeRemoval(stmt.orelse, liveVars2, keepPrints=keepPrints, inLoop=inLoop)
 				liveVars.clear()
 				allVars = liveVars1 | liveVars2 | set(allVariableNamesUsed(stmt.test))
 				liveVars |= allVars
@@ -1626,8 +1629,9 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True):
 			elif t == ast.Pass:
 				a.pop(i) # pass does *nothing*
 			elif t in [ast.Continue, ast.Break]:
-				# TODO: When inside a loop, a continue/break statement skips all statements that occur after it
-				pass
+				if inLoop: # If we're in a loop, nothing that follows matters! Otherwise, leave it alone, this will just crash.
+					a = a[:i+1]
+					break
 			# We don't know what they're doing- leave it alone
 			elif t in [ast.ImportFrom]:
 				pass
