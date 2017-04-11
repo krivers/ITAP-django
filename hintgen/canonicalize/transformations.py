@@ -60,7 +60,7 @@ def gatherLocalScope(a, globalMap, scopeName):
 			else:
 				log("transformations\tanonymizeFunctionNames\tWeird parameter type: " + str(type(param)), "bug")
 	
-	items = a.body[:]
+	items = a.body[::-1] # go through this backwards to get the used function names
 	# First, go through and create the globalMap
 	while len(items) > 0:
 		item = items[0]
@@ -112,6 +112,7 @@ def anonymizeStatementNames(a, globalMap, scopeName):
 	varMap.update(globalMap)
 	varMap.update(localMap)
 	randomCounter = [0]
+	functionsSeen = []
 	if type(a) == ast.FunctionDef:
 		for arg in a.args.args:
 			updateVariableNames(arg, varMap, scopeName, randomCounter)
@@ -303,6 +304,7 @@ def mapHelper(a, helper, idNum):
 					# Otherwise, what is going on?!?
 					returnLine = []
 					log("transformations\tmapHelper\tWeird removeCall: " + str(type(body[i])), "bug")
+			log("transformations\tmapHelper\tMapped helper function: " + helper.name, "bug")
 			body[i:i+1] = argLines + methodLines + returnLine
 		i += 1
 	return a
@@ -343,22 +345,37 @@ def helperFolding(a, mainFun):
 		if type(item) == ast.FunctionDef:
 			if item.name != mainFun:
 				# We only want non-recursive functions that have a single return which occurs at the end
+				# Also, we don't want any functions with parameters that are changed during the function
 				returnOccurs = countOccurances(item, ast.Return)
 				if countVariables(item, item.name) == 0 and returnOccurs <= 1 and type(item.body[-1]) == ast.Return:
-					for j in range(len(item.body)-1):
-						if couldCrash(item.body[j]):
-							break
+					allArgs = []
+					for arg in item.args.args:
+						allArgs.append(arg.arg)
+					for tmpA in ast.walk(item):
+						if type(tmpA) in [ast.Assign, ast.AugAssign]:
+							allGood = True
+							assignedIds = gatherAssignedVarIds(tmpA.targets if type(tmpA) == ast.Assign else [tmpA.target])
+							for arg in allArgs:
+								if arg in assignedIds:
+									allGood = False
+									break
+							if not allGood:
+								break
 					else:
-						# If we satisfy these requirements, translate the body of the function into all functions that call it
-						gone = True
-						for j in range(len(body)):
-							if i != j and type(body[j]) == ast.FunctionDef:
-								mapHelper(body[j], item, globalCounter)
-								if countVariables(body[j], item.name) > 0:
-									gone = False
-						if gone:
-							body.pop(i)
-							continue
+						for j in range(len(item.body)-1):
+							if couldCrash(item.body[j]):
+								break
+						else:
+							# If we satisfy these requirements, translate the body of the function into all functions that call it
+							gone = True
+							for j in range(len(body)):
+								if i != j and type(body[j]) == ast.FunctionDef:
+									mapHelper(body[j], item, globalCounter)
+									if countVariables(body[j], item.name) > 0:
+										gone = False
+							if gone:
+								body.pop(i)
+								continue
 		elif type(item) == ast.Assign:
 			# Is it ever changed in the global area?
 			if len(item.targets) == 1 and type(item.targets[0]) == ast.Name:
