@@ -466,14 +466,49 @@ def conditionalSpecialFunction(cv, orig):
 		# check to see if you're moving values that used to be in conditionals
 		cvCopy = cv.deepcopy()
 		cvCopy.path = cvCopy.path[1:]
-		oldSpot = cvCopy.traverseTree(deepcopy(cv.start))
-		if hasattr(oldSpot, "combinedConditional"):
-			# replace the move with a change that just changes the whole conditional tree
+		combinedSpot = cvCopy.traverseTree(deepcopy(cv.start))
+		if hasattr(combinedSpot, "combinedConditional"):
+			# First, see if we can just find a single tree that corresponds to this in the original code
 			cvCopy2 = cv.deepcopy()
 			newTree = cvCopy2.applyChange()
-			newSpot = cvCopy.traverseTree(newTree)
-			newCv = ChangeVector(cvCopy.path[1:], oldSpot, newSpot, start=cv.start)
-			return newCv
+			if hasattr(combinedSpot, "global_id"): # we can find this in the original tree
+				newSpot = cvCopy.traverseTree(newTree)
+				newCv = ChangeVector(cvCopy.path[1:], combinedSpot, newSpot, start=cv.start)
+				return newCv
+			else:
+				# replace the move with a change that just changes the whole conditional tree
+				cvCopy.path = cvCopy.path[1:]
+				oldSpot = cvCopy.traverseTree(deepcopy(cv.start))
+				while type(oldSpot) != ast.If and len(cvCopy.path) > 0: # get up to the If level...
+					cvCopy.path = cvCopy.path[1:]
+					oldSpot = cvCopy.traverseTree(deepcopy(cv.start))
+				if len(cvCopy.path) > 0:
+					newSpot = cvCopy.traverseTree(newTree)
+					newCv = ChangeVector(cvCopy.path[1:], oldSpot, newSpot, start=cv.start)
+					newCv.wasMoveVector = True
+					return newCv
+				else:
+					log("Individualize\tconditionalSpecialFunction\tCouldn't find Ifs in move: " + str(cv), "bug")
+	elif isinstance(cv, DeleteVector):
+		# check to see if you're deleting values that used to be in conditionals on their own
+		cvCopy = cv.deepcopy()
+		cvCopy.path = cvCopy.path[1:]
+		oldSpot = cvCopy.traverseTree(deepcopy(cv.start))
+		if hasattr(oldSpot, "combinedConditional"):
+			origCv = cv.deepcopy()
+			origCv.path = generatePathToId(orig, cv.oldSubtree.global_id)
+			origParentSpot = origCv.traverseTree(deepcopy(orig))
+			if type(origParentSpot) == ast.If:
+				# We need to replace this if statement with its body
+				if len(origParentSpot.orelse) == 0:
+					if len(origParentSpot.body) == 1:
+						newCv = ChangeVector(cv.path[1:], origParentSpot, origParentSpot.body[0], start=orig)
+						return newCv
+					else:
+						log("Individualize\tconditionalSpecialFunction\tUnexpected multiline: " + str(cv), "bug")
+				else:
+					log("Individualize\tconditionalSpecialFunction\tUnexpected else: " + str(cv), "bug")
+
 	if hasattr(cv.oldSubtree, "combinedConditionalOp"):
 		# We need to move up higher in the tree
 		if (type(cv.oldSubtree) == ast.Or and type(cv.newSubtree) == ast.And) or \
@@ -496,6 +531,20 @@ def conditionalSpecialFunction(cv, orig):
 		else:
 			log("Individualize\tconditionalSpecialFunction\tUnexpected types: " + str(type(cv.oldSubtree)) + "," + str(type(cv.newSubtree)), "bug")
 	elif hasattr(cv.oldSubtree, "combinedConditional"):
+		# First - can we just change the whole conditional?
+		cvCopy = cv.deepcopy()
+		cvCopy.path = cvCopy.path
+		newWholeConditional = cvCopy.traverseTree(deepcopy(cvCopy.start))
+		if type(newWholeConditional) == ast.If:
+			origCopy = cv.deepcopy()
+			origPath = generatePathToId(orig, newWholeConditional.global_id)
+			origCopy.path = [-1] + origPath
+			oldWholeConditional = origCopy.traverseTree(deepcopy(orig))
+			newCv = ChangeVector(origPath, oldWholeConditional, newWholeConditional, start=orig)
+			return newCv
+		else:
+			log("individualize\tcombinedConditional\tWeird type?\t" + str(type(newWholeConditional)), "bug")
+
 		# tree must be a boolean operation combining multiple conditionals
 		treeTests = cv.oldSubtree.values
 		treeStmts = []
@@ -531,6 +580,17 @@ def conditionalSpecialFunction(cv, orig):
 			return newCV[0]
 		else:
 			return newCV
+	elif hasattr(cv.oldSubtree, "moved_line"):
+		if isinstance(cv, DeleteVector):
+			# replace this with a ChangeVector, replacing the if statement with the return/assign
+			oldPart = cv.oldSubtree
+			cvCopy = cv.deepcopy()
+			cvCopy.path = generatePathToId(orig, cv.oldSubtree.moved_line)
+			newPart = cvCopy.traverseTree(deepcopy(orig))
+			newCv = ChangeVector(cv.path, oldPart, newPart, start=cv.start)
+			return newCv
+		else:
+			log("individualize\tconditionalSpecialFunctions\tMoved return line: " + str(cv), "bug")
 	return cv
 
 def mapEdit(canon, orig, edit, nameMap=None):
@@ -555,6 +615,9 @@ def mapEdit(canon, orig, edit, nameMap=None):
 		# Sometimes we've already edited the given old subtree (like with multi-conditionals). If so, skip this step.
 		if hasattr(cv.oldSubtree, "global_id") and cv.oldSubtree.global_id in alreadyEdited:
 			del edit[count]
+			continue
+		elif hasattr(cv, "alreadyDone"):
+			count += 1
 			continue
 		cv = propagatedVariableSpecialFunction(cv, replacedVariables)
 		cv = helperFoldingSpecialFunction(cv, updatedOrig)
@@ -603,6 +666,15 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			else:
 				log("Individualize\tcouldn't find variable in original: " + printFunction(cv.oldSubtree, 0) + \
 						  "\t" + printFunction(cv.start, 0) + "\t" + printFunction(updatedOrig, 0), "bug")
+
+		if hasattr(cv.oldSubtree, "second_global_id"):
+			if type(cv.oldSubtree) == ast.If:
+				cvCopy = cv.deepcopy()
+				cvCopy.path = [-1] + generatePathToId(orig, cv.oldSubtree.second_global_id)
+				secondSpot = cvCopy.traverseTree(deepcopy(orig))
+				newCv = DeleteVector(cvCopy.path[1:], secondSpot, None, start=orig)
+				newCv.alreadyDone = True
+				edit[count:count+1] = [edit[count]] + [newCv]
 
 		# Next, update the starting tree
 		if isinstance(cv, SwapVector):
@@ -689,6 +761,8 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			elif type(cv.oldSubtree) == ast.Compare and len(cv.oldSubtree.ops) != len(cv.newSubtree.ops):
 				pass
 			elif type(cv.oldSubtree) == ast.Slice:
+				pass
+			elif hasattr(cv, "wasMoveVector"):
 				pass
 			else:
 				removePropertyFromAll(cv.oldSubtree, "treeWeight")

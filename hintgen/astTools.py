@@ -1123,7 +1123,7 @@ def isDefault(a):
 
 def transferMetaData(a, b):
 	"""Transfer the metadata of a onto b"""
-	properties = [	"global_id", "lineno", "col_offset",
+	properties = [	"global_id", "second_global_id", "lineno", "col_offset",
 					"originalId", "varID", "variableGlobalId", 
 					"randomVar", "propagatedVariable", "loadedVariable", "dontChangeName",
 					"reversed", "negated", "inverted",

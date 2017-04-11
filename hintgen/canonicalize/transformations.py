@@ -2424,8 +2424,10 @@ def conditionalRedundancy(a):
 				# If a line appears in both, move it outside the conditionals
 				if len(stmt.body) > 0 and len(stmt.orelse) > 0 and compareASTs(stmt.body[-1], stmt.orelse[-1], checkEquality=True) == 0:
 					nextLine = stmt.body[-1]
+					nextLine.second_global_id = stmt.orelse[-1].global_id
 					stmt.body = stmt.body[:-1]
 					stmt.orelse = stmt.orelse[:-1]
+					stmt.moved_line = nextLine.global_id
 					# Remove the if statement if both if and else are empty
 					if len(stmt.body) == 0 and len(stmt.orelse) == 0:
 						a[i:i+1] = [ast.Expr(stmt.test, global_id=stmt.global_id), nextLine]
@@ -2546,6 +2548,7 @@ def collapseConditionals(a):
 						type(ifLine) == ast.Return and compareASTs(ifLine, l[i-1].body[0], checkEquality=True) == 0:
 						# If they do, combine their tests with an Or and get rid of this line
 						l[i-1].test = ast.BoolOp(ast.Or(combinedConditionalOp=True), [l[i-1].test, l[i].test], combinedConditional=True)
+						l[i-1].second_global_id = l[i].global_id
 						l.pop(i)
 					# Then, check whether the current and latter lines have the same returns
 					elif i != len(l) - 1 and type(ifLine) == type(l[i+1]) == ast.Return and \

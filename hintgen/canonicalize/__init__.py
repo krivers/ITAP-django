@@ -137,7 +137,8 @@ def checkGlobalIds(a, l):
 			"addedNot", "addedNotOp", "addedOther", "addedOtherOp", 
 			"collapsedExpr", "removedLines", 
 			"helperVar", "helperReturn",
-			"orderedBinOp", "typeCastFunction" ]
+			"orderedBinOp", "typeCastFunction",
+			"second_global_id", "moved_line" ]
 		for t in addedNodes:
 			if hasattr(a, t):
 				break
