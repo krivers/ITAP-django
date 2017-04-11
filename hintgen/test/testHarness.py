@@ -61,9 +61,9 @@ def textToFunction(s):
 		return None
 	# Set this up to look like Python 3
 	#f.write("from __future__ import (absolute_import, division, print_function)\n")
-	if len(instructorFunctions) != 0:
-		f.write(instructorFunctions + "\n\n")
 	f.write(s.code)
+	if len(instructorFunctions) != 0:
+		f.write("\n\n" + instructorFunctions)
 	f.close()
 
 	# Try loading the file in a timed thread in case the file calls infinitely-looping code
@@ -166,7 +166,6 @@ def run_in_timer(proc, timerTime):
 		# If the process is still running, kill it
 		if proc.is_alive():
 			timeout = True
-			#log("testHarness\tscore\tInfinite loop?", "bug")
 			try:
 				proc.terminate()
 				time.sleep(0.01)
@@ -187,11 +186,30 @@ def run_in_timer(proc, timerTime):
 	else:
 		return "Success"
 
+def contains_function(a, problem_name):
+	for line in a.body:
+		if type(line) == ast.FunctionDef and line.name == problem_name:
+			return True
+	return False
+
 def score(s, tests, returnFeedback=False):
 	# Note that now, infinite loops will break all test cases that come after that. We're OK with this as long as we order test cases properly.
 	if not hasattr(s, "loadedFun"):
-		s.loadedFun = None
-		s.loadedFun = textToFunction(s)
+		if not hasattr(s, "tree") or s.tree == None:
+			try:
+				tmpTree = ast.parse(s.code)
+			except:
+				s.feedback = "Could not load code"
+				return (0, s.feedback) if returnFeedback else 0
+		else:
+			tmpTree = s.tree
+
+		if contains_function(tmpTree, s.problem.name):
+			s.loadedFun = None
+			s.loadedFun = textToFunction(s)
+		else:
+			s.feedback = "ERROR: could not find required function in code"
+			return (0, s.feedback) if returnFeedback else 0
 	f = s.loadedFun
 
 	if f == None:
