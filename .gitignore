@@ -95,5 +95,9 @@ db
 db.sqlite3
 
 hintgen/data/
+hintgen/combined_data/
+hintgen/log/
+hintgen/test/tmp/
 
 mydatabase
+
