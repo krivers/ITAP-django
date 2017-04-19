@@ -625,6 +625,11 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			del edit[count]
 			continue
 		elif hasattr(cv, "alreadyDone"):
+			# Need to update the path and start tree
+			cv.start = updatedOrig
+			cv.path = generatePathToId(updatedOrig, cv.oldSubtree.global_id)
+			edit[count] = cv
+			updatedOrig = edit[count].applyChange()
 			count += 1
 			continue
 		cv = propagatedVariableSpecialFunction(cv, replacedVariables)
