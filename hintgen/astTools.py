@@ -504,18 +504,19 @@ def couldCrash(a):
 				return True
 			argTypes.append(eventual)
 
-		for argSet in funDict[funName]: # the given possibilities of arg types
-			if len(argSet) != len(argTypes):
-				continue
-			if not typeCrashes: # If we don't care about types, stop now
-				return False
+		if funDict[funName] != None:
+			for argSet in funDict[funName]: # the given possibilities of arg types
+				if len(argSet) != len(argTypes):
+					continue
+				if not typeCrashes: # If we don't care about types, stop now
+					return False
 
-			for i in range(len(argSet)):
-				if not (argSet[i] == argTypes[i] or issubclass(argTypes[i], argSet[i])):
-					break
-			else: # if all types matched
-				return False
-		return True # Didn't fit any of the options
+				for i in range(len(argSet)):
+					if not (argSet[i] == argTypes[i] or issubclass(argTypes[i], argSet[i])):
+						break
+				else: # if all types matched
+					return False
+			return True # Didn't fit any of the options
 	elif type(a) == ast.Subscript: # can only get an index from a string or list
 		return eventualType(a.value) not in [str, list, tuple]
 	elif type(a) == ast.Name:
@@ -641,7 +642,7 @@ def eventualType(a):
 				return uniqueTypes.pop()
 			return None
 
-		if funName in funDict:
+		if funName in funDict and funDict[funName] != None:
 			possibleTypes = []
 			for argSet in funDict[funName]:
 				if len(argSet) == len(argTypes):
