@@ -174,6 +174,29 @@ def gatherAllParameters(a):
 			allIds |= set([(node.arg, origName)])
 	return allIds
 
+def gatherAllHelpers(a, restricted_names):
+	"""Gather all helper function names in the tree that have been anonymized"""
+	if type(a) != ast.Module:
+		return set()
+	helpers = set()
+	for item in a.body:
+		if type(item) == ast.FunctionDef:
+			if not hasattr(item, "dontChangeName") and item.name not in restricted_names: # this got anonymized
+				origName = item.originalId if hasattr(item, "originalId") else None
+				helpers |= set([(item.name, origName)])
+	return helpers
+
+def gatherAllFunctionNames(a):
+	"""Gather all helper function names in the tree that have been anonymized"""
+	if type(a) != ast.Module:
+		return set()
+	helpers = set()
+	for item in a.body:
+		if type(item) == ast.FunctionDef:
+			origName = item.originalId if hasattr(item, "originalId") else None
+			helpers |= set([(item.name, origName)])
+	return helpers
+
 def gatherAssignedVars(targets):
 	"""Take a list of assigned variables and extract the names/subscripts/attributes"""
 	if type(targets) != list:
@@ -1185,6 +1208,18 @@ def applyVariableMap(a, variableMap):
 		if a.name in variableMap:
 			a.name = variableMap[a.name]
 	return applyToChildren(a, lambda x : applyVariableMap(x, variableMap))
+
+def applyHelperMap(a, helperMap):
+	if not isinstance(a, ast.AST):
+		return a
+	if type(a) == ast.Name:
+		if a.id in helperMap:
+			a.id = helperMap[a.id]
+	elif type(a) == ast.FunctionDef:
+		if a.name in helperMap:
+			a.name = helperMap[a.name]
+	return applyToChildren(a, lambda x : applyHelperMap(x, helperMap))
+
 
 def astFormat(x, gid=None):
 	"""Given a value, turn it into an AST if it's a constant; otherwise, leave it alone."""

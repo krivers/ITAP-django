@@ -144,6 +144,10 @@ def createNameMap(a, d=None):
 		d = { }
 	if not isinstance(a, ast.AST):
 		return d
+	if type(a) == ast.Module: # Need to go through the functions backwards to make this right
+		for i in range(len(a.body) - 1, -1, -1):
+			createNameMap(a.body[i], d)
+		return d
 	if type(a) in [ast.FunctionDef, ast.ClassDef]:
 		if hasattr(a, "originalId") and a.name not in d:
 			d[a.name] = a.originalId

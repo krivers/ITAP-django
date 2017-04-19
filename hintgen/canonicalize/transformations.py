@@ -46,7 +46,7 @@ def updateVariableNames(a, varMap, scopeName, randomCounter):
 		for child in ast.iter_child_nodes(a):
 			updateVariableNames(child, varMap, scopeName, randomCounter)
 
-def gatherLocalScope(a, globalMap, scopeName):
+def gatherLocalScope(a, globalMap, scopeName, goBackwards=False):
 	localMap = { }
 	varLetter = "g" if type(a) == ast.Module else "v"
 	paramCounter = 0
@@ -59,15 +59,19 @@ def gatherLocalScope(a, globalMap, scopeName):
 					paramCounter += 1
 			else:
 				log("transformations\tanonymizeFunctionNames\tWeird parameter type: " + str(type(param)), "bug")
-	
-	items = a.body[::-1] # go through this backwards to get the used function names
+	if goBackwards:
+		items = a.body[::-1] # go through this backwards to get the used function names
+	else:
+		items = a.body[:]
 	# First, go through and create the globalMap
 	while len(items) > 0:
 		item = items[0]
 		if type(item) in [ast.FunctionDef, ast.ClassDef]:
 			if not builtInName(item.name) and item.name not in localMap and item.name not in globalMap:
-				localMap[item.name] = varLetter + str(localCounter) + scopeName
+				localMap[item.name] = "helper_" + varLetter + str(localCounter) + scopeName
 				localCounter += 1
+			else:
+				item.dontChangeName = True
 
 		# If there are any variables in this node, find and label them
 		if type(item) in [	ast.Assign, ast.AugAssign, ast.For, ast.With, 
@@ -105,9 +109,9 @@ def gatherLocalScope(a, globalMap, scopeName):
 		items = items[1:]
 	return localMap
 
-def anonymizeStatementNames(a, globalMap, scopeName):
+def anonymizeStatementNames(a, globalMap, scopeName, goBackwards=False):
 	"""Gather the local variables, then update variable names in each line"""
-	localMap = gatherLocalScope(a, globalMap, scopeName)
+	localMap = gatherLocalScope(a, globalMap, scopeName, goBackwards=goBackwards)
 	varMap = { }
 	varMap.update(globalMap)
 	varMap.update(localMap)
@@ -127,7 +131,7 @@ def anonymizeNames(a, namesToKeep):
 	globalMap = { }
 	for var in namesToKeep:
 		globalMap[var] = var
-	anonymizeStatementNames(a, globalMap, "")
+	anonymizeStatementNames(a, globalMap, "", goBackwards=True)
 	return a
 
 def propogateNameMetadata(a, namesToKeep):
@@ -1427,6 +1431,18 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True, inLoop=False):
 	"""LiveVars keeps track of the variables that will be necessary"""
 	if liveVars == None:
 		liveVars = set()
+	if type(a) == ast.Module:
+		# Remove functions that will be overwritten anyway
+		namesSeen = []
+		i = len(a.body) - 1
+		while i >= 0:
+			if type(a.body[i]) == ast.FunctionDef:
+				if a.body[i].name in namesSeen:
+					a.body.pop(i)
+				else:
+					namesSeen.append(a.body[i].name)
+			i -= 1
+
 	if type(a) in [ast.Module, ast.FunctionDef]:
 		gid = a.body[0].global_id if len(a.body) > 0 and hasattr(a.body[0], "global_id") else None
 		a.body = deadCodeRemoval(a.body, liveVars=liveVars, keepPrints=keepPrints, inLoop=inLoop)

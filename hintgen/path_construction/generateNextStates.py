@@ -154,6 +154,17 @@ def chooseGoal(s, goals, states):
 			(goal, goalDist, changes) = (g, tempD, tempChanges)
 	# Then do variable matching between the two programs
 	if goal != None:
+		# First, do helper function mapping, if it's necessary
+		helperDistributions = generateHelperDistributions(s, goal, goals, states)
+		if len(helperDistributions) > 0:
+			goalDist = 2 # reset because now we're going to count variables
+			origGoal = goal
+			for modG in helperDistributions:
+				(tempD, tempChanges) = distance(s, modG)
+				# prefer more common goals over less common ones
+				if (tempD < goalDist) or (tempD == goalDist and modG.count > goal.count):
+					(goal, goalDist, changes) = (modG, tempD, tempChanges)
+			
 		goalDist = 2 # reset because now we're going to count variables
 		origGoal = goal
 		allDistributions = generateVariableDistributions(s, goal, goals, states)
@@ -163,6 +174,78 @@ def chooseGoal(s, goals, states):
 			if (tempD < goalDist) or (tempD == goalDist and modG.count > goal.count):
 				(goal, goalDist, changes) = (modG, tempD, tempChanges)
 	return goal
+
+def generateHelperDistributions(s, g, goals, states):
+	restricted_names = list(eval(s.problem.arguments).keys())
+	sHelpers = gatherAllHelpers(s.tree, restricted_names)
+	gHelpers = gatherAllHelpers(g.tree, restricted_names)
+	nonMappableHelpers = gatherAllFunctionNames(g.tree) - gHelpers
+	randomCount = nCount = newRandomCount = 0
+	if len(sHelpers) > len(gHelpers):
+		gHelpers |= set([("random_fun" + str(i), None) for i in range(len(sHelpers) - len(gHelpers))])
+		randomCount = newRandomCount = len(sHelpers) - len(gHelpers)
+	elif len(gHelpers) > len(sHelpers):
+		sHelpers |= set([("new_fun" + str(i), None) for i in range(len(gHelpers) - len(sHelpers))])
+		nCount = len(gHelpers) - len(sHelpers)
+
+	# First, track down vars which are going to conflict with built-in names in the goal state
+	starterPairs = []
+	sList, gList, nList = list(sHelpers), list(gHelpers), list(nonMappableHelpers)
+	i = 0
+	while i < len(sList):
+		for j in range(len(nList)):
+			if sList[i][1] == nList[j][0]: # if the variable will conflict with a built-in name
+				if randomCount > 0: # match the last random var to this var
+					starterPairs.append((sList[i][0], "random_fun" + str(randomCount-1))) 
+					sList.pop(i)
+					gList.remove(("random_fun" + str(randomCount-1), None))
+					randomCount -= 1
+					i -= 1 # since we're popping, make sure to check the next one
+					break
+				else: # generate a new random var and replace the current pos with a new n 
+					starterPairs.append((sList[i][0], "random_fun" + str(newRandomCount)))
+					sList[i] = ("new_fun" + str(nCount), None)
+					newRandomCount += 1
+					nCount += 1
+					break
+		i += 1
+	# Get rid of the original names now
+	sList = [x[0] for x in sList]
+	gList = [x[0] for x in gList]
+
+	listOfMaps = generateMappings(sList, gList)
+	allMaps = []
+	for map in listOfMaps:
+		d = { }
+		for tup in map:
+			d[tup[1]] = tup[0]
+		allMaps.append(d)
+	allFuns = []
+	for map in allMaps:
+		tmpTree = deepcopy(g.tree)
+		tmpTree = applyHelperMap(tmpTree, map)
+		tmpCode = printFunction(tmpTree)
+
+		matches = list(filter(lambda x : x.code==tmpCode, goals))
+		if len(matches) > 0:
+			matches = sorted(matches, key=lambda s: getattr(s, "count"))
+			tmpG = matches[-1]
+			tmpG.tree = str_to_tree(tmpG.tree_source)
+			allFuns.append(tmpG)
+		else:
+			tmpG = CanonicalState(code=tmpCode, problem=s.problem, count=0)
+			tmpG.tree = tmpTree
+			tmpG.tree_source = tree_to_str(tmpTree)
+			tmpG.treeWeight = g.treeWeight
+			tmpG = codetest(tmpG)
+			if tmpG.score != 1:
+				log("generateNextStates\tgenerateHelperDistributions\tBad helper remapping: " + str(map), "bug")
+				log(g.code, "bug")
+				log(tmpCode, "bug")
+			allFuns.append(tmpG)
+			goals.append(tmpG)
+			states.append(tmpG)
+	return allFuns
 
 def generateVariableDistributions(s, g, goals, states):
 	sParameters = gatherAllParameters(s.tree)
@@ -206,7 +289,7 @@ def generateVariableDistributions(s, g, goals, states):
 		# If it's too large, just do the obvious one-to-one mapping.
 		listOfMaps = [[(sList[i], gList[i]) for i in range(len(sList))]]
 	else:
-		listOfMaps = generateVariableMappings(sList, gList)
+		listOfMaps = generateMappings(sList, gList)
 	allMaps = []
 	for map in listOfMaps:
 		d = { }
@@ -242,13 +325,13 @@ def generateVariableDistributions(s, g, goals, states):
 			states.append(tmpG)
 	return allFuns
 
-def generateVariableMappings(s, g):
+def generateMappings(s, g):
 	if len(s) == 0:
 		return [[]]
 	allMaps = []
 	for i in range(len(g)):
 		thisMap = (s[0], g[i])
-		restMaps = generateVariableMappings(s[1:], g[:i] + g[i+1:])
+		restMaps = generateMappings(s[1:], g[:i] + g[i+1:])
 		if s[0] != g[i]: # only need to include maps that aren't changing the variables
 			for map in restMaps:
 				map.append(copy.deepcopy(thisMap))
