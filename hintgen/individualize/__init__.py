@@ -220,7 +220,7 @@ def basicTypeSpecialFunction(cv):
 	if type(cv.oldSubtree) == type(cv.newSubtree) and \
 			(cv.path[0] in [('n', 'Number'), ('s', 'String'), ('id', 'Name'), ('value', 'Name Constant'), ('s', 'Bytes')]):
 		cvCopy = cv.deepcopy()
-		cv.oldSubtree = cvCopy.traverseTree(deepcopy(cv.start))
+		cv.oldSubtree = deepcopy(cvCopy.traverseTree(cv.start))
 		if cv.path[0] == ('n', 'Number'):
 			cv.newSubtree = ast.Num(cv.newSubtree)
 		elif cv.path[0] == ('s', 'String'):
@@ -247,8 +247,8 @@ def propagatedVariableSpecialFunction(cv, replacedVariables):
 		while type(oldSpot) == list or (not hasattr(oldSpot, "loadedVariable") and hasattr(oldSpot, "propagatedVariable")):
 			cvCopy = cvCopy.deepcopy()
 			cvCopy.path = cvCopy.path[1:]
-			oldSpot = cvCopy.traverseTree(deepcopy(cvCopy.start))
-			newSpot = cvCopy.traverseTree(deepcopy(newTree))
+			oldSpot = deepcopy(cvCopy.traverseTree(cvCopy.start))
+			newSpot = deepcopy(cvCopy.traverseTree(newTree))
 		if hasattr(oldSpot, "loadedVariable") and oldSpot.variableGlobalId not in replacedVariables:
 			return ChangeVector(cvCopy.path[1:], oldSpot, newSpot, start=cvCopy.start)
 		elif hasattr(oldSpot, "loadedVariable"):
@@ -271,13 +271,13 @@ def noneSpecialFunction(cv):
 	if (not isinstance(cv, AddVector)) and cv.oldSubtree == None:
 		cvCopy = cv.deepcopy()
 		if cv.path[0] == ('value', 'Return'):
-			cv.oldSubtree = cvCopy.traverseTree(deepcopy(cv.start))
+			cv.oldSubtree = deepcopy(cvCopy.traverseTree(cv.start))
 			cv.newSubtree = ast.Return(cv.newSubtree)
 			cv.path = cv.path[1:]
 		elif cv.path[0] in [('lower', 'Slice'), ('upper', 'Slice'), ('step', 'Slice')]:
 			tmpNew = cv.newSubtree
 			cvCopy = cv.deepcopy()
-			cv.oldSubtree = cvCopy.traverseTree(deepcopy(cv.start))
+			cv.oldSubtree = deepcopy(cvCopy.traverseTree(cv.start))
 			cv.newSubtree = deepcopy(cv.oldSubtree) # use the same slice
 			if cv.path[0][0] == 'lower':
 				cv.newSubtree.lower = tmpNew
@@ -291,7 +291,7 @@ def noneSpecialFunction(cv):
 	elif cv.oldSubtree == "None":
 		cv.path = cv.path[1:] # get rid of None and the id
 		cvCopy = cv.deepcopy()
-		cv.oldSubtree = cvCopy.traverseTree(deepcopy(cv.start))
+		cv.oldSubtree = deepcopy(cvCopy.traverseTree(cv.start))
 		if cv.path[0] == ('value', 'Return'):
 			cv.newSubtree = ast.Return(ast.Name(cv.newSubtree, ast.Load()))
 		else:
@@ -318,12 +318,12 @@ def multiCompSpecialFunction(cv, orig, canon):
 		pathLength = len(cv.path)
 		cvCopy = cv.deepcopy()
 		cvCopy.path = cvCopy.path[1:]
-		oldSpot = cvCopy.traverseTree(deepcopy(cv.start))
+		oldSpot = deepcopy(cvCopy.traverseTree(cv.start))
 		cvCopy = cv.deepcopy()
 		cvCopy.path = generatePathToId(orig, oldSpot.global_id)
 		if cvCopy.path != None:
 			cvCopy.path = [(None,None)] + cvCopy.path # The None,None is to force the traversal to go all the way to the node we want, instead of its parent
-			newSpot = cvCopy.traverseTree(deepcopy(orig))
+			newSpot = deepcopy(cvCopy.traverseTree(orig))
 			cvCopy.path = cvCopy.path[1:] # then get rid of the None, None
 			if type(newSpot) == ast.Compare and type(oldSpot) == ast.Compare:
 				# We can insert the new thing normally, it'll automatically get paired with the next edit anyway
@@ -362,14 +362,14 @@ def multiCompSpecialFunction(cv, orig, canon):
 		while i < pathLength:
 			cvCopy = cv.deepcopy()
 			cvCopy.path = cvCopy.path[i:]
-			oldSpot = cvCopy.traverseTree(deepcopy(cv.start))
+			oldSpot = deepcopy(cvCopy.traverseTree(cv.start))
 			if hasattr(oldSpot, "multiComp") and oldSpot.multiComp == True:
 				break
 			i += 1
 		if i < pathLength:
 			cvCopy = cv.deepcopy()
 			cvCopy.path = [(None,None)] + generatePathToId(orig, oldSpot.global_id) # The None,None is to force the traversal to go all the way to the node we want, instead of its parent
-			newSpot = cvCopy.traverseTree(deepcopy(orig))
+			newSpot = deepcopy(cvCopy.traverseTree(orig))
 			cvCopy.path = cvCopy.path[1:] # then get rid of the None, None
 			if type(newSpot) == ast.Compare: # DON'T CHANGE IT OTHERWISE
 				# Otherwise, we need to put back in the boolean operation
@@ -377,8 +377,8 @@ def multiCompSpecialFunction(cv, orig, canon):
 				return cv
 	if hasattr(cv.oldSubtree, "multiCompOp") and cv.oldSubtree.multiCompOp:
 		cvCopy = cv.deepcopy()
-		oldSpot = cvCopy.traverseTree(deepcopy(canon))
-		newSpot = cvCopy.traverseTree(deepcopy(cv.start))
+		oldSpot = deepcopy(cvCopy.traverseTree(canon))
+		newSpot = deepcopy(cvCopy.traverseTree(cv.start))
 		cv = ChangeVector(cvCopy.path, oldSpot, ast.BoolOp(cv.newSubtree, [newSpot]), cv.start)
 		return cv
 	if (hasattr(cv.oldSubtree, "multiCompMiddle") and cv.oldSubtree.multiCompMiddle) or \
@@ -389,7 +389,7 @@ def multiCompSpecialFunction(cv, orig, canon):
 		while i < pathLength:
 			cvCopy = cv.deepcopy()
 			cvCopy.path = cvCopy.path[i:]
-			spot = cvCopy.traverseTree(deepcopy(cv.start))
+			spot = deepcopy(cvCopy.traverseTree(cv.start))
 			if hasattr(spot, "multiComp") and spot.multiComp == True:
 				break
 			i += 1
@@ -399,7 +399,7 @@ def multiCompSpecialFunction(cv, orig, canon):
 			len(findId(orig, spot.global_id).ops) > 1:
 			oldCvCopy = cv.deepcopy()
 			oldCvCopy.path = generatePathToId(orig, spot.global_id)
-			oldSpot = oldCvCopy.traverseTree(deepcopy(orig))
+			oldSpot = deepcopy(oldCvCopy.traverseTree(orig))
 			if type(oldCvCopy.path[0]) == int:
 				oldSpot = oldSpot[oldCvCopy.path[0]]
 			else:
@@ -419,11 +419,11 @@ def multiCompAfterSpecialFunction(cv, startingTree, startingPath):
 	"""Sometimes, with Move Vectors, items that got combined are no longer combined. Fix this by moving up the tree."""
 	if isinstance(cv, MoveVector):
 		cvCopy = cv.deepcopy()
-		origSpot = cvCopy.traverseTree(deepcopy(cv.start))
+		origSpot = deepcopy(cvCopy.traverseTree(cv.start))
 		if len(origSpot) <= cv.oldSubtree or len(origSpot) <= cv.newSubtree:
 			# Change this to a ChangeVector
 			cvCopy.path = startingPath[1:]
-			canonSpot = cvCopy.traverseTree(deepcopy(startingTree))
+			canonSpot = deepcopy(cvCopy.traverseTree(startingTree))
 			newSpot = deepcopy(canonSpot)
 			if type(canonSpot) == ast.BoolOp:
 				newSpot.values.insert(cv.newSubtree, newSpot.values[cv.oldSubtree])
@@ -449,7 +449,7 @@ def augAssignSpecialFunction(cv, orig):
 			i += 1
 			cvCopy = cv.deepcopy()
 			cvCopy.path = cv.path[i:]
-			spot = cvCopy.traverseTree(deepcopy(cv.start))
+			spot = deepcopy(cvCopy.traverseTree(cv.start))
 
 		# Double check to make sure this is actually still an augassign
 		if hasattr(spot, "global_id") and \
@@ -470,7 +470,7 @@ def conditionalSpecialFunction(cv, orig):
 		# check to see if you're moving values that used to be in conditionals
 		cvCopy = cv.deepcopy()
 		cvCopy.path = cvCopy.path[1:]
-		combinedSpot = cvCopy.traverseTree(deepcopy(cv.start))
+		combinedSpot = deepcopy(cvCopy.traverseTree(cv.start))
 		if hasattr(combinedSpot, "combinedConditional"):
 			# First, see if we can just find a single tree that corresponds to this in the original code
 			cvCopy2 = cv.deepcopy()
@@ -482,10 +482,10 @@ def conditionalSpecialFunction(cv, orig):
 			else:
 				# replace the move with a change that just changes the whole conditional tree
 				cvCopy.path = cvCopy.path[1:]
-				oldSpot = cvCopy.traverseTree(deepcopy(cv.start))
+				oldSpot = deepcopy(cvCopy.traverseTree(cv.start))
 				while type(oldSpot) != ast.If and len(cvCopy.path) > 0: # get up to the If level...
 					cvCopy.path = cvCopy.path[1:]
-					oldSpot = cvCopy.traverseTree(deepcopy(cv.start))
+					oldSpot = deepcopy(cvCopy.traverseTree(cv.start))
 				if len(cvCopy.path) > 0:
 					newSpot = cvCopy.traverseTree(newTree)
 					newCv = ChangeVector(cvCopy.path[1:], oldSpot, newSpot, start=cv.start)
@@ -497,11 +497,11 @@ def conditionalSpecialFunction(cv, orig):
 		# check to see if you're deleting values that used to be in conditionals on their own
 		cvCopy = cv.deepcopy()
 		cvCopy.path = cvCopy.path[1:]
-		oldSpot = cvCopy.traverseTree(deepcopy(cv.start))
+		oldSpot = deepcopy(cvCopy.traverseTree(cv.start))
 		if hasattr(oldSpot, "combinedConditional"):
 			origCv = cv.deepcopy()
 			origCv.path = generatePathToId(orig, cv.oldSubtree.global_id)
-			origParentSpot = origCv.traverseTree(deepcopy(orig))
+			origParentSpot = deepcopy(origCv.traverseTree(orig))
 			if type(origParentSpot) == ast.If:
 				# We need to replace this if statement with its body
 				if len(origParentSpot.orelse) == 0:
@@ -519,9 +519,9 @@ def conditionalSpecialFunction(cv, orig):
 		   (type(cv.oldSubtree) == ast.And and type(cv.newSubtree) == ast.Or):
 			cv.path = cv.path[1:]
 			origCopy = cv.deepcopy()
-			oldSpot = origCopy.traverseTree(deepcopy(orig))
+			oldSpot = deepcopy(origCopy.traverseTree(orig))
 			cvCopy = cv.deepcopy()
-			newSpot = cvCopy.traverseTree(deepcopy(cv.start))
+			newSpot = deepcopy(cvCopy.traverseTree(cv.start))
 			if type(newSpot) == ast.BoolOp:
 				newSpot.op = cv.newSubtree
 			elif type(newSpot) == ast.If: # well, it is a combined conditional
@@ -538,12 +538,12 @@ def conditionalSpecialFunction(cv, orig):
 		# First - can we just change the whole conditional?
 		cvCopy = cv.deepcopy()
 		cvCopy.path = cvCopy.path
-		newWholeConditional = cvCopy.traverseTree(deepcopy(cvCopy.start))
+		newWholeConditional = deepcopy(cvCopy.traverseTree(cvCopy.start))
 		if type(newWholeConditional) == ast.If:
 			origCopy = cv.deepcopy()
 			origPath = generatePathToId(orig, newWholeConditional.global_id)
 			origCopy.path = [-1] + origPath
-			oldWholeConditional = origCopy.traverseTree(deepcopy(orig))
+			oldWholeConditional = deepcopy(origCopy.traverseTree(orig))
 			newCv = ChangeVector(origPath, oldWholeConditional, newWholeConditional, start=orig)
 			return newCv
 		else:
@@ -590,7 +590,7 @@ def conditionalSpecialFunction(cv, orig):
 			oldPart = cv.oldSubtree
 			cvCopy = cv.deepcopy()
 			cvCopy.path = generatePathToId(orig, cv.oldSubtree.moved_line)
-			newPart = cvCopy.traverseTree(deepcopy(orig))
+			newPart = deepcopy(cvCopy.traverseTree(orig))
 			newCv = ChangeVector(cv.path, oldPart, newPart, start=cv.start)
 			return newCv
 		else:
@@ -675,7 +675,7 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			if type(cv.oldSubtree) == ast.If:
 				cvCopy = cv.deepcopy()
 				cvCopy.path = [-1] + generatePathToId(orig, cv.oldSubtree.second_global_id)
-				secondSpot = cvCopy.traverseTree(deepcopy(orig))
+				secondSpot = deepcopy(cvCopy.traverseTree(orig))
 				newCv = DeleteVector(cvCopy.path[1:], secondSpot, None, start=orig)
 				newCv.alreadyDone = True
 				edit[count:count+1] = [edit[count]] + [newCv]
@@ -742,7 +742,7 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			while len(cv.path) > 0 and type(cv.path[0]) != int: # we can only remove things from lists
 				cvCopy = cv.deepcopy()
 				cv.path = cvCopy.path = cvCopy.path[1:]
-				spot = cvCopy.traverseTree(deepcopy(updatedOrig))
+				spot = deepcopy(cvCopy.traverseTree(updatedOrig))
 				cv.oldSubtree = spot
 			if len(cv.path) == 0:
 				log("Individualize\tdelete vector couldn't find path" + str(cv), "bug")

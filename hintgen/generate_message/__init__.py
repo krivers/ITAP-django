@@ -1525,7 +1525,6 @@ def formatHints(s, edit, hintLevel, tree):
 			i += 1
 		edit = edit[:i+1]
 	if hintLevel == "structure":
-		tree = deepcopy(tree)
 		for e in edit:
 			e.start = tree
 			tree = e.applyChange()
@@ -1533,11 +1532,9 @@ def formatHints(s, edit, hintLevel, tree):
 		hint.message = "To correct your code, aim for the following code structure:\n<b>" + printFunction(structure, 0) + "</b>"
 		hint.message += "\nIf you need more help, ask for feedback again."
 	elif hintLevel == "solution":
-		tree = deepcopy(tree)
 		for e in edit:
 			e.start = tree
 			tree = e.applyChange()
-
 		hint.message = "Here is a correct solution to this problem which should be close to your solution: \n<b>" + printFunction(tree, 0) + "</b>"
 	hint.save()
 	return hint
