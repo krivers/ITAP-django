@@ -1748,6 +1748,19 @@ def crashesOn(a):
 		elif type(a.op) == ast.Invert:
 			if eventualType(a.operand) != int:
 				return [a]
+	elif type(a) == ast.Compare:
+		if len(a.ops) != len(a.comparators):
+			return [a]
+		elif type(a.ops[0]) in [ast.In, ast.NotIn] and not isIterableType(eventualType(a.comparators[0])):
+			return [a]
+		elif type(a.ops[0]) in [ast.Lt, ast.LtE, ast.Gt, ast.GtE]:
+			# In Python3, you can't compare different types. BOOOOOO!!
+			firstType = eventualType(a.left)
+			if firstType == None:
+				return [a]
+			for comp in a.comparators:
+				if eventualType(comp) != firstType:
+					return [a]
 	elif type(a) == ast.Call:
 		env = [] # TODO: what if the environments aren't imported?
 		funMaps = { "math" : mathFunctions, "string" : builtInStringFunctions }
@@ -1796,6 +1809,20 @@ def crashesOn(a):
 				break # found one that works
 			else:
 				return [a]
+	elif type(a) == ast.Subscript:
+		if eventualType(a.value) not in [str, list, tuple]:
+			return [a]
+	elif type(a) == ast.Name:
+		# If it's an undefined variable, it might crash
+		if hasattr(a, "randomVar"):
+			return [a]
+	elif type(a) == ast.Slice:
+		if a.lower != None and eventualType(a.lower) != int:
+			return [a]
+		if a.upper != None and eventualType(a.upper) != int:
+			return [a]
+		if a.step != None and eventualType(a.step) != int:
+			return [a]
 	elif type(a) in [ast.Assert, ast.Import, ast.ImportFrom, ast.Attribute, ast.Index]:
 		return [a]
 

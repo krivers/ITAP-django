@@ -459,6 +459,14 @@ def couldCrash(a):
 			return True
 		elif type(a.ops[0]) in [ast.In, ast.NotIn] and not isIterableType(eventualType(a.comparators[0])):
 			return True
+		elif type(a.ops[0]) in [ast.Lt, ast.LtE, ast.Gt, ast.GtE]:
+			# In Python3, you can't compare different types. BOOOOOO!!
+			firstType = eventualType(a.left)
+			if firstType == None:
+				return True
+			for comp in a.comparators:
+				if eventualType(comp) != firstType:
+					return True
 	elif type(a) == ast.Call:
 		env = [] # TODO: what if the environments aren't imported?
 		# First, gather up the needed variables
