@@ -460,6 +460,14 @@ def generateStatesInPath(s, goals, states, validCombinations):
 			validCombinations = filterChanges(validCombinations, s.edit, s, s.next)
 		s = s.next
 
+def getAllCombinations(s, changes, states, goals):
+	allChanges = powerSet(changes)
+	# Also find the solution states associated with the changes
+	allCombinations = []
+	for x in allChanges:
+		allCombinations.append((x, applyChangeVectors(s, x, states, goals)))
+	return allCombinations
+
 def getNextState(s, goals, states, given_goal=None):
 	"""Generate the best next state for s, so that it will produce a desirable hint"""
 	s.goal = chooseGoal(s, goals, states) if given_goal == None else given_goal
@@ -469,13 +477,16 @@ def getNextState(s, goals, states, given_goal=None):
 	(s.goalDist, changes) = distance(s, s.goal) # now get the actual changes
 
 	firstRound = True
-	while len(changes) > 8:
+	while len(changes) > 3: # might as well go with this while we can, since it's faster
 		fastChanges = fastOptimizeGoal(s, changes, states, goals, includeSmallSets=firstRound)
 		firstRound = False
-		if fastChanges == None:
-			# Just say that the next state is the goal.
-			s.next = s.goal
-			return
+		if fastChanges == None: 
+			if len(changes) > 6: # Cut off at 6 because 2^6 = 64 * 0.1s per test = 6 seconds at worst
+				# Just say that the next state is the goal.
+				s.next = s.goal
+				return
+			else:
+				break
 		else:
 			changes = fastChanges
 
@@ -484,11 +495,8 @@ def getNextState(s, goals, states, given_goal=None):
 	if allCombinations == None: # There's an optimized goal
 		# Let's get the new change vectors!
 		changes = getChanges(s.tree, s.goal.tree)
-		allChanges = powerSet(changes)
-		# Also find the solution states associated with the changes
-		allCombinations = []
-		for x in allChanges:
-			allCombinations.append((x, applyChangeVectors(s, x, states, goals)))
+		allCombinations = getAllCombinations(s, changes, states, goals)
+
 	s.changesToGoal = len(changes)
 
 	# Now check for the required properties of a next state. Filter before sorting to save time
