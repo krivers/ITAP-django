@@ -274,6 +274,10 @@ def noneSpecialFunction(cv):
 			cv.oldSubtree = deepcopy(cvCopy.traverseTree(cv.start))
 			cv.newSubtree = ast.Return(cv.newSubtree)
 			cv.path = cv.path[1:]
+		elif cv.path[0] == ('value', 'Name Constant'):
+			cv.oldSubtree = deepcopy(cvCopy.traverseTree(cv.start))
+			cv.newSubtree = ast.NameConstant(cv.newSubtree)
+			cv.path = cv.path[1:]
 		elif cv.path[0] in [('lower', 'Slice'), ('upper', 'Slice'), ('step', 'Slice')]:
 			tmpNew = cv.newSubtree
 			cvCopy = cv.deepcopy()
