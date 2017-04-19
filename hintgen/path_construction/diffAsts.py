@@ -245,7 +245,7 @@ def matchLists(x, y):
 		# TODO - check for subsets/supersets in here?
 		# Then, look for the 'best we can do' matches
 		distanceList = [ ]
-		for i in range(len(xSubset)): # Ientify the best matches across all pairs
+		for i in range(len(xSubset)): # Identify the best matches across all pairs
 			st1 = State()
 			st1.tree = xSubset[i][0]
 			for j in range(len(ySubset)):

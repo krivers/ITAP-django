@@ -1128,7 +1128,7 @@ def isMutatingFunction(a):
 	"""Given a function call, this checks whether it might change the program state when run"""
 	if type(a) != ast.Call: # Can only call this on Calls!
 		log("transformations\tisMutatingFunction\tNot a Call: " + str(type(a)), "bug")
-		return None
+		return True
 
 	# Map of all static namesets
 	funMaps = { "math" : mathFunctions, "string" : builtInStringFunctions,
@@ -1152,7 +1152,7 @@ def isMutatingFunction(a):
 		return True # we don't know, so yes
 
 	# TODO: deal with student's functions
-	return funName in funDict
+	return funName not in funDict
 
 def allVariableNamesUsed(a):
 	"""Gathers all the variable names used in the ast"""
@@ -1212,6 +1212,7 @@ def propagateValues(a, liveVars):
 			for var in allVars:
 				if (var in liveVars) and (eventualType(var) not in [int, float, bool, str]):
 					del liveVars[var]
+			return a
 	return applyToChildren(a, lambda x: propagateValues(x, liveVars))
 
 def hasMutatingFunction(a):
@@ -1354,7 +1355,7 @@ def copyPropagation(a, liveVars=None, inLoop=False):
 				names = []
 				if type(a[i].target) == ast.Name:
 					names = [a[i].target.id]
-				elif type(a[i].target) == ast.Tuple:
+				elif type(a[i].target) in [ast.Tuple, ast.List]:
 					for elt in a[i].target.elts:
 						if type(elt) == ast.Name:
 							names.append(elt.id)
@@ -1507,7 +1508,7 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True, inLoop=False):
 				targetNames = []
 				if type(a[i].target) == ast.Name:
 					targetNames = [a[i].target.id]
-				elif type(a[i].target) == ast.Tuple:
+				elif type(a[i].target) in [ast.Tuple, ast.List]:
 					for elt in a[i].target.elts:
 						if type(elt) == ast.Name:
 							targetNames.append(elt.id)
