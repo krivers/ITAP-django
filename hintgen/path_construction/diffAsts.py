@@ -361,6 +361,15 @@ def findMoveVectors(mapSet, x, y, add, delete):
 				moveActions.append(SwapVector([-1], pair[1], pair[2]))
 			else:
 				log("Missing movePair type: " + str(pair[0]), "bug")
+	# We need to make sure the indicies start at the appropriate numbers, since they're referring to the original tree
+	if len(delete) > 0:
+		for action in moveActions:
+			if isinstance(action, MoveVector):
+				addToCount = 0
+				for deleteAction in delete:
+					if deleteAction <= action.newSubtree:
+						addToCount += 1
+				action.newSubtree += addToCount
 	return moveActions
 
 def diffLists(x, y, ignoreVariables=False):

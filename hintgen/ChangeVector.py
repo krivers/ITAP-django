@@ -387,6 +387,12 @@ class SwapVector(ChangeVector):
 	def update(self, newStart, mapDict): 
 		# WARNING: mapDict will be modified!
 		self.start = newStart
+
+		if "moved" in mapDict:
+			mapDict["moved"] += [self.oldSubtree, self.newSubtree]
+		else:
+			mapDict["moved"] = [self.oldSubtree, self.newSubtree]
+
 		if self.oldPath == None:
 			treeSpot, mapDict = self.updateTree(newStart, mapDict)
 			if "pos" not in mapDict:
@@ -487,23 +493,38 @@ class MoveVector(ChangeVector):
 		self.start = newStart
 		treeSpot, mapDict = self.updateTree(newStart, mapDict)
 
+		if "moved" in mapDict:
+			mapDict["moved"].append(self.oldSubtree)
+		else:
+			mapDict["moved"] = [self.oldSubtree]
+
 		if "pos" not in mapDict:
 			self.createMapDict(mapDict, treeSpot)
 
-		# Update based on the original position
+		# Update based on the original position.
 		if self.oldSubtree not in mapDict["pos"]:
 			log("MoveVector\tupdate\t\tCan't find old subtree: " + str(self.oldSubtree) + "," + str(mapDict["pos"]), "bug")
 			return
-		if self.newSubtree not in mapDict["pos"]:
-			if self.newSubtree < min(mapDict["pos"]):
-				self.newSubtree = min(mapDict["pos"]) # just go to the lowest position
-			elif self.newSubtree > max(mapDict["pos"]):
-				self.newSubtree = max(mapDict["pos"]) # go to the highest position
+
+		if self.newSubtree in mapDict["moved"]:
+			nextPos = self.newSubtree + 1
+			while (mapDict["len"] < nextPos) and (nextPos in mapDict["moved"] or nextPos not in mapDict["pos"]):
+				nextPos += 1
+			if nextPos >= mapDict["len"]:
+				log("ChangeVector\tMoveVector\tupdate\tBad Position!! " + str(self) + ";" + str(mapDict), "bug")
 			else:
-				higher = self.newSubtree
-				while higher not in mapDict["pos"]:
-					higher += 1
-				self.newSubtree = higher # go to the next line, as the better place to insert
+				self.newSubtree = nextPos
+		else:
+			if self.newSubtree not in mapDict["pos"]:
+				if self.newSubtree < min(mapDict["pos"]):
+					self.newSubtree = min(mapDict["pos"]) # just go to the lowest position
+				elif self.newSubtree > max(mapDict["pos"]):
+					self.newSubtree = max(mapDict["pos"]) # go to the highest position
+				else:
+					higher = self.newSubtree
+					while higher not in mapDict["pos"]:
+						higher += 1
+					self.newSubtree = higher # go to the next line, as the better place to insert
 		self.oldSubtree = mapDict["pos"].index(self.oldSubtree)
 		self.newSubtree = mapDict["pos"].index(self.newSubtree)
 		index = mapDict["pos"].pop(self.oldSubtree)
