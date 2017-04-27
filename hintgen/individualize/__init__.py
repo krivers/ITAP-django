@@ -618,8 +618,18 @@ def conditionalSpecialFunction(cv, orig):
 			newPart = deepcopy(cvCopy.traverseTree(orig))
 			newCv = ChangeVector(cv.path, oldPart, newPart, start=cv.start)
 			return newCv
+		# if it's a ChangeVector
+		elif not (isinstance(cv, MoveVector) or isinstance(cv, SwapVector) or isinstance(cv, SubVector) or isinstance(cv, SuperVector)):
+			# Add an AddVector for the moved line after the change
+			cvCopy = cv.deepcopy()
+			cvCopy.path = [-1] + generatePathToId(orig, cv.oldSubtree.moved_line)
+			movedLine = deepcopy(cvCopy.traverseTree(orig))
+			newPath = copy.deepcopy(cv.path)
+			newPath[0] += 1 # move to the next line
+			newCv = AddVector(newPath, None, movedLine, start=cv.start)
+			cv.oldSubtree.already_moved = True
+			return [cv, newCv]
 		else:
-			log("individualize\tcombinedConditional\tWeird type?\t" + str(type(newWholeConditional)), "bug")
 			log("individualize\tconditionalSpecialFunctions\tMoved return line: " + str(cv), "bug")
 
 		# tree must be a boolean operation combining multiple conditionals
