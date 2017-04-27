@@ -277,9 +277,12 @@ def generate_canonical_state(cleaned_state, anon_state, given_names):
 		args = { }
 	if anon_state.count > 1 and anon_state.canonical != None:
 		canonical_state = anon_state.canonical
-		canonical_state.tree = str_to_tree(canonical_state.tree_source)
-		canonical_state.orig_tree = deepcopy(cleaned_state.tree)
+		orig_tree = deepcopy(cleaned_state.tree)
+		runGiveIds(orig_tree)
+		canonical_state.orig_tree = orig_tree
 		canonical_state.orig_tree_source = tree_to_str(canonical_state.orig_tree)
+		canonical_state.tree = deepcopy(canonical_state.orig_tree)
+		canonical_state = getCanonicalForm(canonical_state, given_names, args)
 	else:
 		canonical_state = CanonicalState(code=cleaned_state.code, problem=cleaned_state.problem,
 										 score=cleaned_state.score, count=1, 
