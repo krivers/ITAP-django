@@ -296,7 +296,7 @@ def generateHintText(hint_level, sourceState, bestChange, bestCode):
 	return hint
 
 
-def getSyntaxHint(source_state):
+def getSyntaxHint(source_state, hint_level):
 	# First, try Aayush's approach
 	# f = TEST_PATH + "tmp/temporarycode" + str(random.randint(0,100000)) + ".py"
 	# currentCode = source_state.code
@@ -373,23 +373,24 @@ def getSyntaxHint(source_state):
 
 
 	# Determine the hint level
-	submissions = list(SourceState.objects.filter(student=source_state.student))
-	if len(submissions) > 0 and submissions[-1].hint != None and submissions[-1].problem == source_state.problem and \
-		submissions[-1].code == source_state.code:
-		prev_hint_level = submissions[-1].hint.level
-		if "syntax" in prev_hint_level:
-			if prev_hint_level == "syntax_next_step":
-				hint_level = "syntax_structure"
-			elif prev_hint_level == "syntax_structure":
-				hint_level = "syntax_half_steps"
-			elif prev_hint_level in ["syntax_half_steps", "syntax_solution"]:
-				hint_level = "syntax_solution"
+	if hint_level == "syntax_default":
+		submissions = list(SourceState.objects.filter(student=source_state.student))
+		if len(submissions) > 0 and submissions[-1].hint != None and submissions[-1].problem == source_state.problem and \
+			submissions[-1].code == source_state.code:
+			prev_hint_level = submissions[-1].hint.level
+			if "syntax" in prev_hint_level:
+				if prev_hint_level == "syntax_next_step":
+					hint_level = "syntax_structure"
+				elif prev_hint_level == "syntax_structure":
+					hint_level = "syntax_half_steps"
+				elif prev_hint_level in ["syntax_half_steps", "syntax_solution"]:
+					hint_level = "syntax_solution"
+				else:
+					hint_level = "syntax_next_step"
 			else:
 				hint_level = "syntax_next_step"
 		else:
 			hint_level = "syntax_next_step"
-	else:
-		hint_level = "syntax_next_step"
 
 	message = generateHintText(hint_level, source_state, bestChange, bestCode)
 	firstEdit = bestChange[0]

@@ -53,7 +53,7 @@ def do_hint_chain(code, user, problem, interactive=False):
 	while stepCount < cutoff:
 		stepCount += 1
 		printedStates += "State: \n" + state.code + "\n"
-		state = get_hint(state, hintLevel=3)
+		state = get_hint(state, hint_level="next_step")
 		if state.goal != None:
 			printedStates += "Goal: \n" + state.goal.code + "\n"
 
@@ -365,12 +365,12 @@ def run_tests(source_state):
 	save_states(source_state, cleaned_state, anon_state, canonical_state)
 	return source_state
 
-def get_hint(source_state, hintLevel=-1):
+def get_hint(source_state, hint_level="default"):
 	source_state = test_code(source_state)
 
 	# If we can't parse their solution, use a simplified version of the algorithm with textual edits
 	if source_state.tree == None:
-		return getSyntaxHint(source_state)
+		return getSyntaxHint(source_state, "syntax_" + hint_level)
 
 	args = eval(source_state.problem.arguments)
 	given_code = ast.parse(source_state.problem.given_code)
@@ -401,19 +401,20 @@ def get_hint(source_state, hintLevel=-1):
 		source_state.hint = hint
 	else:
 		# Determine the hint level
-		submissions = list(SourceState.objects.filter(student=source_state.student))
-		if len(submissions) > 0 and submissions[-1].hint != None and submissions[-1].problem == source_state.problem and \
-			submissions[-1].code == source_state.code:
-			if submissions[-1].hint.level == "next_step":
-				hint_level = "structure"
-			elif submissions[-1].hint.level == "structure":
-				hint_level = "half_steps"
-			elif submissions[-1].hint.level in ["half_steps", "solution"]:
-				hint_level = "solution"
+		if hint_level == "default":
+			submissions = list(SourceState.objects.filter(student=source_state.student))
+			if len(submissions) > 0 and submissions[-1].hint != None and submissions[-1].problem == source_state.problem and \
+				submissions[-1].code == source_state.code:
+				if submissions[-1].hint.level == "next_step":
+					hint_level = "structure"
+				elif submissions[-1].hint.level == "structure":
+					hint_level = "half_steps"
+				elif submissions[-1].hint.level in ["half_steps", "solution"]:
+					hint_level = "solution"
+				else:
+					hint_level = "next_step"
 			else:
 				hint_level = "next_step"
-		else:
-			hint_level = "next_step"
 
 		# If necessary, generate next/goal states for the anon and canonical states
 		if anon_state.goal == None:
