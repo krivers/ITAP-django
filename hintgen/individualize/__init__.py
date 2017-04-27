@@ -31,6 +31,9 @@ def generatePathToId(a, id, globalId=None):
 	return None
 
 def childHasTag(a, tag):
+	""" Includes the AST itself"""
+	if hasattr(a, tag):
+		return True
 	if type(a) == list:
 		for child in a:
 			if childHasTag(child, tag):
@@ -166,6 +169,12 @@ def createNameMap(a, d=None):
 def findId(a, id):
 	if hasattr(a, "global_id") and a.global_id == id:
 		return a
+	if type(a) == list:
+		for child in a:
+			tmp = findId(child, id)
+			if tmp != None:
+				return tmp
+		return None
 	if not isinstance(a, ast.AST):
 		return None
 	for child in ast.iter_child_nodes(a):
