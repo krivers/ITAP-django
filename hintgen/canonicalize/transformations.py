@@ -1550,9 +1550,9 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True, inLoop=False):
 						if len(stmt.orelse) > 0:
 							a[i:i+1] = a[i] + stmt.orelse
 
-				# The names are wiped
-				for name in targetNames:
-					liveVars.remove(name)
+				# The names are wiped UPDATE - NOPE, what if we never enter the loop? 
+				#for name in targetNames:
+				#	liveVars.remove(name)
 			elif t == ast.While:
 				# If there is no use of break, there's no reason to use else with the loop,
 				# so move the lines outside and go over them separately
