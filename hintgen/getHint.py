@@ -110,7 +110,8 @@ def do_hint_chain(code, user, problem, interactive=False):
 			log(s + "\n" + printedStates, "bug")
 	return s, chrCount, editCount, orig_state, state
 
-def clear_solution_space(problem):
+
+def clear_solution_space(problem, keep_starter=True):
 	old_states = State.objects.filter(problem=problem.id)
 	if len(old_states) > 1:
 		# Clean out the old states
@@ -118,12 +119,13 @@ def clear_solution_space(problem):
 		log("Deleting " + str(len(old_states)) + " old states...", "bug")
 		old_states.delete()
 
-		# But save the instructor solution!
-		starter_state = SourceState(code=starter_code, problem=problem, count=1, student=Student.objects.get(id=1))
-		starter_state = get_hint(starter_state)
-		starter_state.save()
-		problem.solution = starter_state
-		problem.save()
+		if keep_starter:
+			# But save the instructor solution!
+			starter_state = SourceState(code=starter_code, problem=problem, count=1, student=Student.objects.get(id=1))
+			starter_state = get_hint(starter_state)
+			starter_state.save()
+			problem.solution = starter_state
+			problem.save()
 
 def import_code_as_states(f, course_id, problem_name, clear_space=False, run_profiler=False):
 	if run_profiler:
