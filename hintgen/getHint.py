@@ -1,4 +1,4 @@
-import ast, sys, io, pstats, cProfile
+import ast, sys, io, pstats, cProfile, time, random, os
 from .canonicalize import getAllImports, runGiveIds, anonymizeNames, getCanonicalForm, propogateMetadata, propogateNameMetadata
 from .path_construction import diffAsts, generateNextStates
 from .individualize import mapEdit
