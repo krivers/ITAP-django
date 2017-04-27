@@ -387,7 +387,7 @@ class SwapVector(ChangeVector):
 			if type(self.oldPath[0]) == int:
 				oldTreeSpot[self.oldPath[0]] = tmpNewValue
 			else:
-				setattr(oldTreeSpot, self.newPath[0][0], tmpNewValue)
+				setattr(oldTreeSpot, self.oldPath[0][0], tmpNewValue)
 
 			if type(self.newPath[0]) == int:
 				newTreeSpot[self.newPath[0]] = tmpOldValue
