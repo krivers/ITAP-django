@@ -910,9 +910,13 @@ def constantFolding(a):
 						return newR
 					elif type(l) == float:
 						return ast.Call(ast.Name("float", ast.Load(), typeCastFunction=True), [newR], [])
-				elif type(a.op) in [ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.LShift, ast.RShift]:
+				elif type(a.op) in [ast.Mult, ast.LShift, ast.RShift]:
 					# If either is a float, it's 0
 					return 0.0 if float in [eventualType(r), type(l)] else 0
+				elif type(a.op) in [ast.Div, ast.FloorDiv, ast.Mod]:
+					# Check if the right might be zero
+					if type(r) in builtInTypes and r != 0:
+						return 0.0 if float in [eventualType(r), type(l)] else 0
 			# Same for 1
 			elif l == 1:
 				if type(a.op) == ast.Mult and eventualType(r) in [int, float]:
