@@ -106,7 +106,7 @@ def countVariables(a, id):
 			count += 1
 	return count
 
-def gatherAllNames(a):
+def gatherAllNames(a, keep_orig=True):
 	"""Gather all names in the tree (variable or otherwise).
 		Names are returned along with their original names 
 		(which are used in variable mapping)"""
@@ -121,11 +121,11 @@ def gatherAllNames(a):
 	allIds = set()
 	for node in ast.walk(a):
 		if type(node) == ast.Name:
-			origName = node.originalId if hasattr(node, "originalId") else None
+			origName = node.originalId if (keep_orig and hasattr(node, "originalId")) else None
 			allIds |= set([(node.id, origName)])
 	return allIds
 
-def gatherAllVariables(a):
+def gatherAllVariables(a, keep_orig=True):
 	"""Gather all variable names in the tree. Names are returned along
 		with their original names (which are used in variable mapping)"""
 	if type(a) == list:
@@ -142,21 +142,23 @@ def gatherAllVariables(a):
 			currentId = node.id if type(node) == ast.Name else node.arg
 			# Only take variables
 			if not (builtInName(currentId) or hasattr(node, "dontChangeName")):
-				origName = node.originalId if hasattr(node, "originalId") else None
+				origName = node.originalId if (keep_orig and hasattr(node, "originalId")) else None
 				if (currentId, origName) not in allIds:
 					for pair in allIds:
 						if pair[0] == currentId:
 							if pair[1] == None:
 								allIds -= {pair}
-								allIds += {(currentId, origName)}
+								allIds |= {(currentId, origName)}
 							elif origName == None:
 								pass
 							else:
-								log("astTools\tgatherAllVariables\tConflicting originalIds? " + pair[1] + "," + origName, "bug")
+								log("astTools\tgatherAllVariables\tConflicting originalIds? " + pair[0] + " : " + pair[1] + " , " + origName + "\n" + printFunction(a), "bug")
 							break
+					else:
+						allIds |= {(currentId, origName)}
 	return allIds
 
-def gatherAllParameters(a):
+def gatherAllParameters(a, keep_orig=True):
 	"""Gather all parameters in the tree. Names are returned along
 		with their original names (which are used in variable mapping)"""
 	if type(a) == list:
@@ -170,7 +172,7 @@ def gatherAllParameters(a):
 	allIds = set()
 	for node in ast.walk(a):
 		if type(node) == ast.arg:
-			origName = node.originalId if hasattr(node, "originalId") else None
+			origName = node.originalId if (keep_orig and hasattr(node, "originalId")) else None
 			allIds |= set([(node.arg, origName)])
 	return allIds
 

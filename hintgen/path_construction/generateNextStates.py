@@ -249,10 +249,10 @@ def generateHelperDistributions(s, g, goals, states):
 
 def generateVariableDistributions(s, g, goals, states):
 	sParameters = gatherAllParameters(s.tree)
-	gParameters = gatherAllParameters(g.tree)
+	gParameters = gatherAllParameters(g.tree, keep_orig=False)
 	sVariables = gatherAllVariables(s.tree) - sParameters
-	gVariables = gatherAllVariables(g.tree) - gParameters
-	nonMappableVariables = gatherAllNames(g.tree) - gVariables - gParameters
+	gVariables = gatherAllVariables(g.tree, keep_orig=False) - gParameters
+	nonMappableVariables = gatherAllNames(g.tree, keep_orig=False) - gVariables - gParameters
 	randomCount = nCount = newRandomCount = 0
 	if len(sVariables) > len(gVariables):
 		gVariables |= set([("random" + str(i), None) for i in range(len(sVariables) - len(gVariables))])
