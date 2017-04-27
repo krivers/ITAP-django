@@ -124,6 +124,13 @@ class ChangeVector:
 		# Make the change in the last position
 		location = self.path[0]
 		if type(location) == tuple and hasattr(treeSpot, location[0]):
+			oldSpot = getattr(treeSpot, location[0])
+			# Make life easier for ourselves when applying multiple changes at once
+			if self.newSubtree != None and oldSpot != None:
+				if hasattr(oldSpot, "lineno"):
+					self.newSubtree.lineno = oldSpot.lineno
+				if hasattr(oldSpot, "col_offset"):
+					self.newSubtree.col_offset = oldSpot.col_offset
 			setattr(treeSpot, location[0], self.newSubtree)
 			# SPECIAL CASE. If we're changing the variable name, get rid of originalId
 			if type(treeSpot) == ast.Name and location[0] == "id":
@@ -131,6 +138,10 @@ class ChangeVector:
 			elif type(treeSpot) == ast.arg and location[0] == "arg":
 				treeSpot.originalId = None
 		elif type(location) == int and type(treeSpot) == list:
+			if hasattr(treeSpot[location], "lineno"):
+				self.newSubtree.lineno = treeSpot[location].lineno
+			if hasattr(treeSpot[location], "col_offset"):
+				self.newSubtree.col_offset = treeSpot[location].col_offset
 			# Need to swap out whatever is in this location
 			if location >= 0 and location < len(treeSpot):
 				treeSpot[location] = self.newSubtree
