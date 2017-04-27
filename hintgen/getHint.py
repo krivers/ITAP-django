@@ -127,7 +127,54 @@ def clear_solution_space(problem, keep_starter=True):
 			problem.solution = starter_state
 			problem.save()
 
-def import_code_as_states(f, course_id, problem_name, clear_space=False, run_profiler=False):
+def run_all_problems():
+	problems = ["allDigitsOccurIn", "automatedReadabilityIndex", "bridgeBidScore",
+				"canDrinkAlcohol", "charCount", "circleArea", "combineAllLists",
+				"convertToDegrees", "digitOccursIn", "factorial", "findRoot",
+				"findTheCircle", "friendOfFriends", "hasBalancedParentheses",
+				"hasConsecutiveDigits", "hasTwoDigits", "invertDictionary",
+				"isEvenPositiveInt", "isFactorial", "isFactorialPrime",
+				"isHappyNumber", "isLegalTriangle", "isLetterOrDigit",
+				"isPrime", "isRotation", "kthDigit", "mostAnagrams", 
+				"nearestBusStop", "nthFactorialPrime", "nthHappyNumber",
+				"onlyOneTrue", "onlyTwoTrue", "overNineThousand",
+				"parseStringToTable", "sameDigits", "sensibleTemperatureAverage",
+				"sentenceCount", "simplePigLatin", "squareIfNumber", "stockChange",
+				"sumOfSquaresOfDigits", "treasureHunt", "withinFive", "wordCount"]
+	for problem in problems:
+		log("Running " + problem, "bug")
+		import_code_as_states("hintgen/data/"+problem+".csv", 1,
+			problem, clear_space=True, run_profiler=True)
+
+def test_solution_space(problems):
+	for problem in problems:
+		for count in range(20):
+			log("Running " + problem + " " + str(count), "bug")
+			run_solution_space_improvement("hintgen/combined_data/" + problem + ".csv", problem, "random")
+			os.rename(LOG_PATH + problem + "_" + "random" + ".csv", 
+					  LOG_PATH + problem + "_" + "random" + "_" + str(count) + ".csv")
+
+
+def run_all_spaces(keyword):
+	problems = ["all_three_chars", "any_divisible", "any_first_chars", 
+				"any_lowercase", "can_make_breakfast", "can_drink_alcohol", 
+				"convert_to_degrees", "count_all_empty_strings", 
+				"create_number_block", "factorial", "find_root", 
+				"find_the_circle", "first_and_last", "get_extra_bagel", 
+				"go_to_gym", "has_extra_fee", "has_balanced_parentheses", 
+				"has_two_digits", "hello_world", "how_many_egg_cartons", 
+				"is_leap_month", "is_even_positive_int", "is_prime", 
+				"is_punctuation", "is_substring", "kth_digit", "last_index", 
+				"list_of_lists", "multiply_numbers", "nearest_bus_stop", 
+				"no_positive_even", "one_to_n", "over_nine_thousand", 
+				"reduce_to_positive", "second_largest", "single_pig_latin", 
+				"sum_all_even_numbers", "sum_of_odd_digits", "sum_of_digits", 
+				"was_lincoln_alive", "wear_a_coat"
+				]
+	for problem in problems:
+		log("Running " + problem, "bug")
+		run_solution_space_improvement("hintgen/combined_data/" + problem + ".csv", problem, keyword)
+
 def import_code_as_states(f, course_id, problem_name, clear_space=False, run_profiler=False, run_hint_chain=False):
 	if run_profiler:
 		# Set up the profiler
@@ -184,6 +231,97 @@ def import_code_as_states(f, course_id, problem_name, clear_space=False, run_pro
 		ps.print_stats()
 		with open(LOG_PATH + problem_name + "_profile.log", "w") as f:
 			f.write(outStream.getvalue() + s.getvalue())
+	print('\a')
+
+def generate_space(table, problem, keyword):
+	# First, clear the solution space
+	clear_solution_space(problem, keep_starter=False)
+
+	header = table[0]
+	starter = table[1]
+	table = table[2:]
+
+	# Add back in the starter code
+	starter_state = SourceState(code=starter[header.index("fun")], problem=problem, count=1, student=Student.objects.get(id=1))
+	starter_state = get_hint(starter_state)
+	starter_state.save()
+	problem.solution = starter_state
+	problem.save()
+
+	if keyword == "optimal":
+		for line in table:
+			code_id = line[header.index("id")]
+			student_name = line[header.index("student_id")]
+			students = Student.objects.filter(name=student_name)
+			if len(students) == 1:
+				student = students[0]
+			else:
+				student = Student(course=Course.objects.get(id=1), name=student_name)
+				student.save()
+			code = line[header.index("fun")]
+			if int(code_id) % 10 == 0:
+				log("Generating space: " + code_id, "bug")
+			# Now for each piece of code, find the distance between that piece of code and the starter goal
+			state = SourceState(code=code, problem=problem, count=1, student=student)
+			state = get_hint(state)
+			state.save()
+
+def run_solution_space_improvement(f, problem_name, keyword):
+	problem = Problem.objects.get(name=problem_name)
+	table = parse_table(f)
+	generate_space(table, problem, keyword)
+
+	last_state = State.objects.latest('id')
+	all_info = "id,correct_states,all_states,syntax_edit_weight,edit_weight,state_weight,goal_weight\n"
+	correct_states = 1
+	all_states = 1
+
+	if keyword == "optimal":
+		all_states = len(SourceState.objects.filter(problem=problem))
+		correct_states = len(SourceState.objects.filter(problem=problem, score=1))
+
+	header = table[0]
+	table = table[2:]
+
+	if keyword == "random":
+		random.shuffle(table)
+
+	for i in range(len(table)):
+		line = table[i]
+		code_id = line[header.index("id")]
+		student_name = line[header.index("student_id")]
+		students = Student.objects.filter(name=student_name)
+		if len(students) == 1:
+			student = students[0]
+		else:
+			student = Student(course=Course.objects.get(id=1), name=student_name)
+			student.save()
+		code = line[header.index("fun")]
+		if i % 10 == 0:
+			log("Checking distance: " + str(i), "bug")
+
+		result, syntax_edits, semantic_edits, start_state, goal_state = do_hint_chain(code, student, problem)
+		start_weight = diffAsts.getWeight(start_state)
+		goal_weight = diffAsts.getWeight(goal_state) if goal_state != None else -1
+		goal_code = goal_state.code if goal_state != None else ""
+		all_info += str(code_id) + "," + str(correct_states) + "," + \
+					str(all_states) + "," + str(syntax_edits) + \
+					"," + str(semantic_edits) + "," + str(start_weight) + \
+					"," + str(goal_weight) + "," + '"' + start_state.code + \
+					'"' + "," + '"' + goal_code + '"' + "," + "\n"
+
+		if keyword == "random":
+			# Update the counts
+			if start_state.score == 1:
+				correct_states += 1
+			all_states += 1
+		else:
+			# And after that, clear out all new states, unless we're building a space
+			new_states = State.objects.filter(id__gt=last_state.id)
+			new_states.delete()
+
+	with open(LOG_PATH + problem_name + "_" + keyword + ".csv", "w") as f:
+		f.write(all_info)
 	print('\a')
 
 def find_example_solutions(s, goals):
