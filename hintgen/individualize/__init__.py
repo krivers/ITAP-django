@@ -609,9 +609,18 @@ def conditionalSpecialFunction(cv, orig):
 			origCopy.path = [-1] + origPath
 			oldWholeConditional = deepcopy(origCopy.traverseTree(orig))
 			newCv = ChangeVector(origPath, oldWholeConditional, newWholeConditional, start=orig)
+	elif hasattr(cv.oldSubtree, "moved_line") and not hasattr(cv.oldSubtree, "already_moved"):
+		if isinstance(cv, DeleteVector):
+			# replace this with a ChangeVector, replacing the if statement with the return/assign
+			oldPart = cv.oldSubtree
+			cvCopy = cv.deepcopy()
+			cvCopy.path = generatePathToId(orig, cv.oldSubtree.moved_line)
+			newPart = deepcopy(cvCopy.traverseTree(orig))
+			newCv = ChangeVector(cv.path, oldPart, newPart, start=cv.start)
 			return newCv
 		else:
 			log("individualize\tcombinedConditional\tWeird type?\t" + str(type(newWholeConditional)), "bug")
+			log("individualize\tconditionalSpecialFunctions\tMoved return line: " + str(cv), "bug")
 
 		# tree must be a boolean operation combining multiple conditionals
 		treeTests = cv.oldSubtree.values
@@ -648,17 +657,6 @@ def conditionalSpecialFunction(cv, orig):
 			return newCV[0]
 		else:
 			return newCV
-	elif hasattr(cv.oldSubtree, "moved_line"):
-		if isinstance(cv, DeleteVector):
-			# replace this with a ChangeVector, replacing the if statement with the return/assign
-			oldPart = cv.oldSubtree
-			cvCopy = cv.deepcopy()
-			cvCopy.path = generatePathToId(orig, cv.oldSubtree.moved_line)
-			newPart = deepcopy(cvCopy.traverseTree(orig))
-			newCv = ChangeVector(cv.path, oldPart, newPart, start=cv.start)
-			return newCv
-		else:
-			log("individualize\tconditionalSpecialFunctions\tMoved return line: " + str(cv), "bug")
 	return cv
 
 def mapEdit(canon, orig, edit, nameMap=None):
