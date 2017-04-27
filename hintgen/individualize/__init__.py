@@ -823,6 +823,14 @@ def mapEdit(canon, orig, edit, nameMap=None):
 				cv.oldSubtree = spot
 			if len(cv.path) == 0:
 				log("Individualize\tdelete vector couldn't find path" + str(cv), "bug")
+			if cv.path[1] not in [('orelse', 'If'), ('orelse', 'For'), ('orelse', 'While')]:
+				cvCopy = cv.deepcopy()
+				parent = cvCopy.traverseTree(cvCopy.start)
+				if len(parent) < 2:
+					if cv.path[1] in [('body', 'If'), ('body', 'For'), ('body', 'While')]:
+						cv = ChangeVector(cv.path, cv.oldSubtree, ast.Pass(), start=cv.start)
+					else:
+						log("individualize\tmapEdit\tDelete CV: " + str(cv), "bug")
 
 		# Catch any ordering changes that won't need to be propogated to the edit in the old tree
 		if hasattr(cv.oldSubtree, "global_id"):
