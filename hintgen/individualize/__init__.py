@@ -448,7 +448,8 @@ def multiCompAfterSpecialFunction(cv, startingTree, startingPath):
 	return cv
 
 def augAssignSpecialFunction(cv, orig):
-	if childHasTag(cv.oldSubtree, "augAssignVal") or childHasTag(cv.oldSubtree, "augAssignBinOp"):
+	if (not isinstance(cv, DeleteVector)) and (not isStatement(cv.oldSubtree)) and \
+		(childHasTag(cv.oldSubtree, "augAssignVal") or childHasTag(cv.oldSubtree, "augAssignBinOp")):
 		# First, create the oldTree and newTree in full
 		cvCopy = cv.deepcopy()
 		cvCopy.start = deepcopy(cv.start)
@@ -458,15 +459,15 @@ def augAssignSpecialFunction(cv, orig):
 		spot = cv.oldSubtree
 		cvCopy = cv
 		i = 0
-		while type(spot) != ast.Assign and len(cvCopy.path) > i:
+		while type(spot) not in [ast.Assign, ast.AugAssign] and len(cvCopy.path) > i:
 			i += 1
 			cvCopy = cv.deepcopy()
 			cvCopy.path = cv.path[i:]
 			spot = deepcopy(cvCopy.traverseTree(cv.start))
 
 		# Double check to make sure this is actually still an augassign
-		if hasattr(spot, "global_id") and \
-			type(findId(newTree, spot.global_id)) == ast.AugAssign:
+		if type(spot) in [ast.Assign, ast.AugAssign] and hasattr(spot, "global_id"):
+			oldSpot = findId(orig, spot.global_id)
 			newCv = cv.deepcopy()
 			newCv.path = cv.path[i+1:]
 			newCv.oldSubtree = spot
@@ -474,6 +475,36 @@ def augAssignSpecialFunction(cv, orig):
 			cvCopy = cv.deepcopy()
 			cvCopy.path = cv.path[i:]
 			newSpot = cvCopy.traverseTree(newTree)
+			if type(newSpot) == type(spot):
+				# Don't do special things when they aren't needed
+				if type(newSpot) == ast.Assign:
+					if compareASTs(newSpot.targets, spot.targets, checkEquality=True) == 0:
+						# If the two have the same targets and are both binary operations with the target as the left value... 
+						# just change the value
+						if type(newSpot.value) == type(spot.value) == ast.BinOp:
+							if compareASTs(spot.targets[0], spot.value.left, checkEquality=True) == 0 and \
+								compareASTs(newSpot.targets[0], newSpot.value.left, checkEquality=True) == 0:
+								# we just want to change the values
+								return ChangeVector([("right", "Binary Operation"), ("value", "Assign")] + newCv.path, 
+													spot.value.right, newSpot.value.right, newCv.start)
+					elif compareASTs(newSpot.value, spot.value, checkEquality=True) == 0:
+						return cv
+					else:
+						log("Assign", "bug")
+				elif type(newSpot) == ast.AugAssign:
+					diffCount = 0
+					if compareASTs(newSpot.op, spot.op, checkEquality=True) != 0:
+						diffCount += 1
+					if compareASTs(newSpot.target, spot.target, checkEquality=True) != 0:
+						diffCount += 1
+					if compareASTs(newSpot.value, spot.value, checkEquality=True) != 0:
+						diffCount += 1
+					if diffCount == 1:
+						return cv
+					else:
+						log("AugAssign: " + str(diffCount), "bug")
+			else:
+				log("Mismatched types: " + str(type(newSpot)) + "," + str(type(spot)), "bug")
 			newCv.newSubtree = newSpot
 			return newCv
 	return cv
