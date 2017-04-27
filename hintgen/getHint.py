@@ -466,15 +466,25 @@ def get_hint(source_state, hint_level="default"):
 			next_state = used_state.next
 			if not hasattr(next_state, "tree"):
 				next_state.tree = str_to_tree(next_state.tree_source)
-			if not hasattr(next_state, "orig_tree") and hasattr(next_state, "orig_tree_source") and next_state.orig_tree_source!="":
-				next_state.orig_tree = str_to_tree(next_state.orig_tree_source)
 			edit = diffAsts.diffAsts(used_state.tree, next_state.tree)
 			edit, _ = generateNextStates.updateChangeVectors(edit, used_state.tree, used_state.tree)
+			if not hasattr(used_state, "orig_tree"):
+				if hasattr(used_state, "orig_tree_source") and used_state.orig_tree_source != "":
+					used_state.orig_tree = str_to_tree(used_state.orig_tree_source)
+				else:
+					log("getHint\tgetHint\tWhy no orig_tree?!?!" + str(used_state), "bug")
 			edit = mapEdit(used_state.tree, used_state.orig_tree, edit)
 			if len(edit) == 0:
 				if next_state.next != None:
+					if not hasattr(next_state, "orig_tree") and \
+					  (not hasattr(next_state, "orig_tree_source") or \
+					   next_state.orig_tree_source == ""):
+						log("Why no orig_tree?!?" + str(next_state), "bug")
+						next_state.orig_tree = used_state.orig_tree
 					used_state = next_state
 					continue
+				else:
+					log("No edit found: " + str(used_state), "bug")
 			hint = formatHints(used_state, edit, hint_level, used_state.orig_tree) # generate the right level of hint
 			source_state.edit = edit
 			source_state.hint = hint
