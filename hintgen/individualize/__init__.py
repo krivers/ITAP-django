@@ -556,6 +556,26 @@ def conditionalSpecialFunction(cv, orig):
 						log("Individualize\tconditionalSpecialFunction\tUnexpected multiline: " + str(cv), "bug")
 				else:
 					log("Individualize\tconditionalSpecialFunction\tUnexpected else: " + str(cv), "bug")
+	elif isinstance(cv, AddVector):
+		# check to see if you're adding a new value to a comparison operation that doesn't exist yet
+		cvCopy = cv.deepcopy()
+		cvCopy.path = cvCopy.path[1:]
+		oldSpot = deepcopy(cvCopy.traverseTree(cv.start))
+		if hasattr(oldSpot, "combinedConditional"):
+			# replace the original value with a combined value. It's a Subvector!
+			# Go up to the if statement, then grab its test in the orig
+			origCv = cv.deepcopy()
+			origCv.path = cv.path[2:] # I think...
+			testSpot = deepcopy(origCv.traverseTree(orig))
+			origSpot = testSpot.test
+			if cv.path[0] == 0:
+				values = [cv.newSubtree, origSpot]
+			elif cv.path[0] == 1:
+				values = [origSpot, cv.newSubtree]
+			else:
+				log("Individualize\tconditionalSpecialFunction\tHow to deal with adding this item?: " + str(cv), "bug")
+			newCv = SubVector(cv.path[2:], origSpot, ast.BoolOp(ast.Or(), values), start=orig)
+			return newCv
 
 	if hasattr(cv.oldSubtree, "combinedConditionalOp"):
 		# We need to move up higher in the tree
