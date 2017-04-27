@@ -22,13 +22,14 @@ def check_repeating_edits(state, allEdits, printedStates):
 		if state.edit in allEdits:
 			s = "REPEATING EDITS"
 			log(s + "\n" + printedStates, "bug")
-			return s, stepCount, editCount, chrCount
+			return s
 	elif isinstance(state.edit[0], SyntaxEdit):
 		if len(allEdits) > 0:
 			current = state.edit[0]
 			prev = allEdits[-1][0]
 			if not isinstance(prev, SyntaxEdit):
-				log("getHint\tcheck_repeating_edits\tSyntax hint after semantic hint?\n" + str(allEdits) + "\n" + str(state.edit), "bug")
+				log("getHint\tcheck_repeating_edits\tSyntax hint after semantic hint?\n" + 
+					str(allEdits) + "\n" + str(state.edit), "bug")
 				log(printedStates, "bug")
 			else:
 				# If we're adding and then deleting the same thing, it's a loop
@@ -37,15 +38,15 @@ def check_repeating_edits(state, allEdits, printedStates):
 					current.text == prev.text and current.newText == prev.newText:
 					s = "REPEATING EDITS"
 					log(s + "\n" + printedStates, "bug")
-					return s, stepCount, editCount, chrCount
+					return s
 	else:
 		log("Unknown edit type?" + repr(state.edit[0]), filename="bug")
 
 def do_hint_chain(code, user, problem, interactive=False):
-	state = SourceState(code=code, problem=problem, count=1, student=user)
+	orig_state = state = SourceState(code=code, problem=problem, count=1, student=user)
 	failedTests = True
 	stepCount = editCount = chrCount = 0
-	cutoff = 40
+	cutoff = 20
 	printedStates = "************************"
 	allEdits = []
 	# Keep applying hints until either the state is correct or
@@ -62,7 +63,7 @@ def do_hint_chain(code, user, problem, interactive=False):
 
 			repeatingCheck = check_repeating_edits(state, allEdits, printedStates)
 			if repeatingCheck != None:
-				return repeatingCheck
+				return repeatingCheck, chrCount, editCount, orig_state, None
 
 			if isinstance(state.edit[0], ChangeVector):
 				editCount += diffAsts.getChangesWeight(state.edit, False)
@@ -74,7 +75,7 @@ def do_hint_chain(code, user, problem, interactive=False):
 				if newTree == None:
 					s = "EDIT BROKE"
 					log(s + "\n" + printedStates, "bug")
-					return s, stepCount, editCount, chrCount
+					return s, chrCount, editCount, orig_state, None
 				newFun = printFunction(newTree)
 			else: # Fixing a syntax error
 				newFun = applyChanges(state.code, state.edit)
@@ -88,7 +89,7 @@ def do_hint_chain(code, user, problem, interactive=False):
 			log("Scores: " + str(state.score) + "," + str(state.goal.score), "bug")
 			log("Feedback: " + str(state.feedback) + "," + str(state.goal.feedback), "bug")
 			log("DIFF: " + str(diffAsts.diffAsts(state.tree, state.goal.tree)), "bug")
-			return s, stepCount, editCount, chrCount
+			return s, chrCount, editCount, orig_state, None
 		else: # break out when the score reaches 1
 			break
 		if interactive:
@@ -100,13 +101,14 @@ def do_hint_chain(code, user, problem, interactive=False):
 		else: # Got through the hints! Woo!
 			s = "Success"
 	else: # These are the bad cases
+		state = None # no goal state!
 		if stepCount >= cutoff:
 			s = "TOO LONG"
 			log(s + "\n" + printedStates, "bug")
 		else:
 			s = "BROKEN"
 			log(s + "\n" + printedStates, "bug")
-	return s, stepCount, editCount, chrCount
+	return s, chrCount, editCount, orig_state, state
 
 def clear_solution_space(problem):
 	old_states = State.objects.filter(problem=problem.id)
