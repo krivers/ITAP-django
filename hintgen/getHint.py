@@ -128,6 +128,7 @@ def clear_solution_space(problem, keep_starter=True):
 			problem.save()
 
 def import_code_as_states(f, course_id, problem_name, clear_space=False, run_profiler=False):
+def import_code_as_states(f, course_id, problem_name, clear_space=False, run_profiler=False, run_hint_chain=False):
 	if run_profiler:
 		# Set up the profiler
 		out = sys.stdout
@@ -146,6 +147,7 @@ def import_code_as_states(f, course_id, problem_name, clear_space=False, run_pro
 	table = parse_table(f)
 	header = table[0]
 	table = table[1:]
+	results = ""
 	for line in table:
 		if line[0] == "0": # we already have the instructor solutions
 			continue
@@ -157,11 +159,21 @@ def import_code_as_states(f, course_id, problem_name, clear_space=False, run_pro
 			student = Student(course=course, name=student_name)
 			student.save()
 		code = line[header.index("fun")]
-		#state = SourceState(code=code, problem=problem, count=1, student=student)
-		#state = get_hint(state)
-		#state.save()
-		results = do_hint_chain(code, student, problem)
-		log(student_name + ": " + str(results[1]), "bug")
+
+		if run_hint_chain:
+			results = do_hint_chain(code, student, problem)
+			log(student_name + ": " + str(results[0]), "bug")
+		else:
+			start_time = time.time()
+			state = SourceState(code=code, problem=problem, count=1, student=student)
+			state = get_hint(state)
+			state.save()
+			end_time = time.time()
+			results += str(state.id) + "\t" + str(state.score) + "\t" + str(end_time - start_time) + "\n"
+
+	filename = LOG_PATH + problem_name + "_" + ("chain" if run_hint_chain else "results") + ".log"
+	with open(filename, "w") as f:
+		f.write(results)
 
 	if run_profiler:
 		# Check the profiler results
@@ -170,7 +182,7 @@ def import_code_as_states(f, course_id, problem_name, clear_space=False, run_pro
 		s = io.StringIO()
 		ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
 		ps.print_stats()
-		with open(LOG_PATH + "profile.log", "w") as f:
+		with open(LOG_PATH + problem_name + "_profile.log", "w") as f:
 			f.write(outStream.getvalue() + s.getvalue())
 	print('\a')
 
