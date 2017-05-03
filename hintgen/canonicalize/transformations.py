@@ -2278,7 +2278,7 @@ def cleanupNegations(a):
 			# x + (-y)
 			if isNegative(a.right):
 				a.right = turnPositive(a.right)
-				a.op = ast.Sub(global_id=a.op.global_id)
+				a.op = ast.Sub(global_id=a.op.global_id, num_negated=True)
 				return a
 			# (-x) + y
 			elif isNegative(a.left):
@@ -2286,31 +2286,31 @@ def cleanupNegations(a):
 					return a # can't switch if it'll change the message
 				else:
 					(a.left,a.right) = (a.right,turnPositive(a.left))
-					a.op = ast.Sub(global_id=a.op.global_id)
+					a.op = ast.Sub(global_id=a.op.global_id, num_negated=True)
 					return a
 		elif type(a.op) == ast.Sub:
 			# x - (-y)
 			if isNegative(a.right):
 				a.right = turnPositive(a.right)
-				a.op = ast.Add(global_id=a.op.global_id)
+				a.op = ast.Add(global_id=a.op.global_id, num_negated=True)
 				return a
 			elif type(a.right) == ast.BinOp:
 				# x - (y + z) = x + (-y - z)
 				if type(a.right.op) == ast.Add:
 					a.right.left = cleanupNegations(ast.UnaryOp(ast.USub(addedOtherOp=True), a.right.left, addedOther=True))
-					a.right.op = ast.Sub(global_id=a.right.op.global_id)
-					a.op = ast.Add(global_id=a.op.global_id)
+					a.right.op = ast.Sub(global_id=a.right.op.global_id, num_negated=True)
+					a.op = ast.Add(global_id=a.op.global_id, num_negated=True)
 					return a
 				# x - (y - z) = x + (-y + z) = x + (z - y)
 				elif type(a.right.op) == ast.Sub:
 					if couldCrash(a.right.left) and couldCrash(a.right.right):
 						a.right.left = cleanupNegations(ast.UnaryOp(ast.USub(addedOtherOp=True), a.right.left, addedOther=True))
-						a.right.op = ast.Add(global_id=a.right.op.global_id)
-						a.op = ast.Add(global_id=a.op.global_id)
+						a.right.op = ast.Add(global_id=a.right.op.global_id, num_negated=True)
+						a.op = ast.Add(global_id=a.op.global_id, num_negated=True)
 						return a
 					else:
 						(a.right.left, a.right.right) = (a.right.right, a.right.left)
-						a.op = ast.Add(global_id=a.op.global_id)
+						a.op = ast.Add(global_id=a.op.global_id, num_negated=True)
 						return a
 		# Move negations to the outer part of multiplications
 		elif type(a.op) == ast.Mult:
@@ -2342,13 +2342,13 @@ def cleanupNegations(a):
 				# -(x + y) = -x - y
 				if type(a.operand.op) == ast.Add:
 					a.operand.left = cleanupNegations(ast.UnaryOp(ast.USub(addedOtherOp=True), a.operand.left, addedOther=True))
-					a.operand.op = ast.Sub(global_id=a.operand.op.global_id)
+					a.operand.op = ast.Sub(global_id=a.operand.op.global_id, num_negated=True)
 					return a.operand
 				# -(x - y) = -x + y = y - x
 				elif type(a.operand.op) == ast.Sub:
 					if couldCrash(a.operand.left) and couldCrash(a.operand.right):
 						a.operand.left = cleanupNegations(ast.UnaryOp(ast.USub(addedOtherOp=True), a.operand.left, addedOther=True))
-						a.operand.op = ast.Add(global_id=a.operand.op.global_id)
+						a.operand.op = ast.Add(global_id=a.operand.op.global_id, num_negated=True)
 						return a.operand
 					else:
 						(a.operand.left,a.operand.right) = (a.operand.right,a.operand.left)

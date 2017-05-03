@@ -345,6 +345,25 @@ def doCompare(op, left, right):
 	elif top == ast.NotIn:
 		return left not in right
 
+def num_negate(op):
+	top = type(op)
+	neg = not op.num_negated if hasattr(op, "num_negated") else True
+	if top == ast.Add:
+		newOp = ast.Sub()
+	elif top == ast.Sub:
+		newOp = ast.Add()
+	elif top in [ast.Mult, ast.Div, ast.Mod, ast.Pow, ast.LShift, 
+				 ast.RShift, ast.BitOr, ast.BitXor, ast.BitAnd, ast.FloorDiv]:
+		return None # can't negate this
+	elif top in [ast.Num, ast.Name]:
+		# this is a normal value, so put a - in front of it
+		newOp = ast.UnaryOp(ast.USub(addedNeg=True), op)
+	else:
+		log("astTools\tnum_negate\tUnusual type: " + str(top), "bug")
+	transferMetaData(op, newOp)
+	newOp.num_negated = neg
+	return newOp
+
 def negate(op):
 	"""Return the negation of the provided operator"""
 	top = type(op)
@@ -1167,7 +1186,7 @@ def transferMetaData(a, b):
 					"augAssignVal", "augAssignBinOp",
 					"combinedConditional", "combinedConditionalOp",
 					"multiComp", "multiCompPart", "multiCompMiddle", "multiCompOp",
-					"addedNot", "addedNotOp", "addedOther", "addedOtherOp",
+					"addedNot", "addedNotOp", "addedOther", "addedOtherOp", "addedNeg",
 					"collapsedExpr", "removedLines",
 					"helperVar", "helperReturnVal", "helperParamAssign", "helperReturnAssign", 
 					"orderedBinOp", "typeCastFunction" ]

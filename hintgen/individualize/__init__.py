@@ -62,11 +62,13 @@ def undoReverse(a):
 	return tmp
 
 # Applies special functions if they're included as metadata OR if they're specified by ID
-def specialFunctions(old, new):
+def specialFunctions(cv, old, new):
 	if type(old) == type(new) == list:
 		for i in range(min(len(old), len(new))):
-			(old[i], new[i]) = specialFunctions(old[i], new[i])
-		return (old, new)
+			(old[i], new[i]) = specialFunctions(cv, old[i], new[i])
+		cv.oldSubtree = old
+		cv.newSubtree = new
+		return cv
 	rev = neg = False
 	if (hasattr(old, "reversed") and old.reversed and (not hasattr(old, "multCompFixed"))):
 		rev = True
@@ -86,10 +88,28 @@ def specialFunctions(old, new):
 			old = old.operand
 			new = new.operand
 
+	if hasattr(old, "num_negated") and old.num_negated:
+		origNew = deepcopy(new)
+		(old, new) = (num_negate(old), num_negate(new))
+		if new == None: # couldn't reverse the new operator
+			# To get here, we must have a binary operator. Go up a level and negate the right side
+			cvCopy = cv.deepcopy()
+			parentSpot = deepcopy(cvCopy.traverseTree(cvCopy.start))
+			if type(parentSpot) == ast.BinOp:
+				cvCopy.path = cvCopy.path[1:]
+				cvCopy.oldSubtree = parentSpot
+				cvCopy.newSubtree = deepcopy(parentSpot)
+				cvCopy.newSubtree.op = origNew
+				cvCopy.newSubtree.right = num_negate(cvCopy.newSubtree.right)
+				return cvCopy
+			else:
+				log("individualize\tspecialFunctions\tWhere are we? " + str(type(parentSpot)), "bug")
+
 	#if (hasattr(old, "inverted") and old.inverted):
 	#	(old, new) = (invert(old), invert(new))
-
-	return (old, new)
+	cv.oldSubtree = old
+	cv.newSubtree = new
+	return cv
 
 def countNewVarsInD(d):
 	max = 0
@@ -724,13 +744,15 @@ def mapEdit(canon, orig, edit, nameMap=None):
 					setattr(parent, pos, deepcopy(cv.oldSubtree))
 			# Otherwise, apply special functions by hand
 			else:
-				(cv.oldSubtree, partialNew) = specialFunctions(cv.oldSubtree, partialNew)
+				prev_new_subtree = cv.newSubtree
+				cv = specialFunctions(cv, cv.oldSubtree, partialNew)
 				if type(pos) == int:
-					parent[pos] = partialNew
+					parent[pos] = cv.newSubtree
 				else:
-					setattr(parent, pos, partialNew)
+					setattr(parent, pos, cv.newSubtree)
+				cv.newSubtree = prev_new_subtree
 		else:
-			(cv.oldSubtree, cv.newSubtree) = specialFunctions(cv.oldSubtree, cv.newSubtree)
+			cv = specialFunctions(cv, cv.oldSubtree, cv.newSubtree)
 
 		if hasattr(cv.oldSubtree, "variableGlobalId") and cv.oldSubtree.variableGlobalId not in replacedVariables:
 			# replace with the original variable
