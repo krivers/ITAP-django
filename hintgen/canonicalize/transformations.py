@@ -413,15 +413,17 @@ def listNotEmpty(a):
 	if type(a) == ast.Call:
 		if type(a.func) == ast.Name and a.func.id in ["range"]:
 			if len(a.args) == 1: # range(x)
-				return type(a.args[0]) == ast.Num and a.args[0].n > 0
+				return type(a.args[0]) == ast.Num and type(a.args[0].n) != complex and a.args[0].n > 0
 			elif len(a.args) == 2: # range(start, x)
-				if type(a.args[0]) == ast.Num and type(a.args[1]) == ast.Num and a.args[0].n < a.args[1].n:
+				if type(a.args[0]) == ast.Num and type(a.args[1]) == ast.Num and \
+					type(a.args[0].n) != complex and type(a.args[1].n) != complex and \
+					a.args[0].n < a.args[1].n:
 					return True
 				elif type(a.args[1]) == ast.BinOp and type(a.args[1].op) == ast.Add:
-					if type(a.args[1].right) == ast.Num and a.args[1].right.n > 0 and \
+					if type(a.args[1].right) == ast.Num and type(a.args[1].right) != complex and a.args[1].right.n > 0 and \
 						compareASTs(a.args[0], a.args[1].left, checkEquality=True) == 0:
 						return True
-					elif type(a.args[1].left) == ast.Num and a.args[1].left.n > 0 and \
+					elif type(a.args[1].left) == ast.Num and type(a.args[1].left) != complex and a.args[1].left.n > 0 and \
 						compareASTs(a.args[0], a.args[1].right, checkEquality=True) == 0:
 						return True
 	elif type(a) in [ast.List, ast.Tuple]:
@@ -2248,7 +2250,7 @@ def turnPositive(a):
 	"""Take a negative number and make it positive"""
 	if type(a) == ast.UnaryOp and type(a.op) == ast.USub:
 		return a.operand
-	elif type(a) == ast.Num and a.n < 0:
+	elif type(a) == ast.Num and type(a.n) != complex and a.n < 0:
 		a.n = a.n * -1
 		return a
 	else:
@@ -2259,7 +2261,7 @@ def isNegative(a):
 	"""Is the give number negative?"""
 	if type(a) == ast.UnaryOp and type(a.op) == ast.USub:
 		return True
-	elif type(a) == ast.Num and a.n < 0:
+	elif type(a) == ast.Num and type(a.n) != complex and a.n < 0:
 		return True
 	else:
 		return False

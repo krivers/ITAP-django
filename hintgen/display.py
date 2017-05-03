@@ -263,7 +263,7 @@ def printFunction(a, indent=0):
 		s += ")"
 	elif t == ast.Num:
 		if a.n != None:
-			if a.n < 0:
+			if (type(a.n) == complex) or (type(a.n) != complex and a.n < 0):
 				s += '(' + str(a.n) + ')'
 			else:
 				s += str(a.n)

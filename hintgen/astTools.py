@@ -4,6 +4,8 @@ from .namesets import *
 from .display import printFunction
 
 def cmp(a, b):
+	if type(a) == type(b) == complex:
+		return (a.real > b.real) - (a.real < b.real)
 	return (a > b) - (a < b)
 
 def tree_to_str(a):
@@ -464,6 +466,7 @@ def couldCrash(a):
 		elif type(a.op) == ast.Pow:
 			if not ((l in [int, float] and r == int) or \
 				(l in [int, float] and type(a.right) == ast.Num and \
+				 type(a.right.n) != complex and \
 				 (a.right.n >= 1 or a.right.n == 0 or a.right.n <= -1))):
 				return True
 		else: # ast.Div, ast.FloorDiv, ast.Mod
