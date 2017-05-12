@@ -293,7 +293,7 @@ def propagatedVariableSpecialFunction(cv, replacedVariables):
 			log("Individualize\tCouldn't move up to a ChangeVector: " + printFunction(oldSpot, 0) + " - " + printFunction(newSpot, 0), "bug")
 	return cv
 
-def helperFoldingSpecialFunction(cv, orig):
+def helperFoldingSpecialFunction(cv, edit, orig):
 	if hasattr(cv.oldSubtree, "helperVar") or hasattr(cv.oldSubtree, "helperReturnVal") or \
 		hasattr(cv.oldSubtree, "helperParamAssign") or hasattr(cv.oldSubtree, "helperReturnAssn"):
 		log("Oh no! helper function!" + "\n" + str(cv) + "\n" + str(edit) + "\n" + \
@@ -781,7 +781,7 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			count += 1
 			continue
 		cv = propagatedVariableSpecialFunction(cv, replacedVariables)
-		cv = helperFoldingSpecialFunction(cv, updatedOrig)
+		cv = helperFoldingSpecialFunction(cv, edit, updatedOrig)
 		cv = noneSpecialFunction(cv)
 		cv = augAssignSpecialFunction(cv, updatedOrig)
 		cv = multiCompSpecialFunction(cv, updatedOrig, canon)
