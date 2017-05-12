@@ -1445,7 +1445,15 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True, inLoop=False):
 		while i >= 0:
 			if type(a.body[i]) == ast.FunctionDef:
 				if a.body[i].name in namesSeen:
-					a.body.pop(i)
+					# SPECIAL CHECK! Actually, the function will cause the code to crash if some of the args have the same name. Don't delete it then.
+					argNames = []
+					for arg in a.body[i].args.args:
+						if arg.arg in argNames:
+							break
+						else:
+							argNames.append(arg.arg)
+					else: # only remove this if the args won't break it
+						a.body.pop(i)
 				else:
 					namesSeen.append(a.body[i].name)
 			i -= 1

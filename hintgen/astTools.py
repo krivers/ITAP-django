@@ -444,6 +444,13 @@ def couldCrash(a):
 		if couldCrash(child):
 			return True
 
+	if type(a) == ast.FunctionDef:
+		argNames = []
+		for arg in a.args.args:
+			if arg.arg in argNames: # conflicting arg names!
+				return True
+			else:
+				argNames.append(arg.arg)
 	if type(a) == ast.Assign:
 		for target in a.targets:
 			if type(target) != ast.Name: # can crash if it's a tuple and we can't unpack the value
