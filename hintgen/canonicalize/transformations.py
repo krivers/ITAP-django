@@ -1369,16 +1369,16 @@ def copyPropagation(a, liveVars=None, inLoop=False):
 							if type(elt.value) == ast.Name:
 								names.append(elt.value.id)
 							else:
-								log("transformations\tcopyPropagation\tFor target subscript not a name: " + str(type(elt.value)), "bug")
+								log("transformations\tcopyPropagation\tFor target subscript not a name: " + str(type(elt.value)) + "\t" + printFunction(elt.value), "bug")
 						else:
-							log("transformations\tcopyPropagation\tFor target not a name: " + str(type(elt)), "bug")
+							log("transformations\tcopyPropagation\tFor target not a name: " + str(type(elt)) + "\t" + printFunction(elt), "bug")
 				elif type(a[i].target) == ast.Subscript:
 					if type(a[i].target.value) == ast.Name:
 						names.append(a[i].target.value.id)
 					else:
-						log("transformations\tcopyPropagation\tFor target subscript not a name: " + str(type(a[i].target.value)), "bug")
+						log("transformations\tcopyPropagation\tFor target subscript not a name: " + str(type(a[i].target.value)) + "\t" + printFunction(a[i].target.value), "bug")
 				else:
-					log("transformations\tcopyPropagation\tFor target not a name: " + str(type(a[i].target)), "bug")
+					log("transformations\tcopyPropagation\tFor target not a name: " + str(type(a[i].target)) + "\t" + printFunction(a[i].target), "bug")
 
 				for name in names:
 					liveKeys = list(liveVars.keys())
@@ -1530,16 +1530,16 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True, inLoop=False):
 							if type(elt.value) == ast.Name:
 								targetNames.append(elt.value.id)
 							else:
-								log("transformations\tcopyPropagation\tFor target subscript not a name: " + str(type(elt.value)), "bug")
+								log("transformations\tdeadCodeRemoval\tFor target subscript not a name: " + str(type(elt.value)) + "\t" + printFunction(elt.value), "bug")
 						else:
-							log("transformations\tcopyPropagation\tFor target not a name: " + str(type(elt)), "bug")
+							log("transformations\tdeadCodeRemoval\tFor target not a name: " + str(type(elt)) + "\t" + printFunction(elt), "bug")
 				elif type(a[i].target) == ast.Subscript:
 					if type(a[i].target.value) == ast.Name:
 						targetNames.append(a[i].target.value.id)
 					else:
-						log("transformations\tcopyPropagation\tFor target subscript not a name: " + str(type(a[i].target.value)), "bug")
+						log("transformations\tdeadCodeRemoval\tFor target subscript not a name: " + str(type(a[i].target.value)) + "\t" + printFunction(a[i].target.value), "bug")
 				else:
-					log("transformations\tcopyPropagation\tFor target not a name: " + str(type(a[i].target)), "bug")
+					log("transformations\tdeadCodeRemoval\tFor target not a name: " + str(type(a[i].target)) + "\t" + printFunction(a[i].target), "bug")
 
 				# We need to make ALL variables in the loop live, since they update continuously
 				liveVars |= set(allVariableNamesUsed(stmt))

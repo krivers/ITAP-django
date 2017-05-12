@@ -97,21 +97,21 @@ class ChangeVector:
 				if hasattr(treeSpot, move[0]):
 					treeSpot = getattr(treeSpot, move[0])
 				else:
-					log("Change Vector\ttraverseTree\t\tMissing attr: " + str(move[0]), "bug")
+					log("Change Vector\ttraverseTree\t\tMissing attr: " + str(move[0]) + "\n" + printFunction(t), "bug")
 					return -99
 			elif type(move) == int:
 				if type(treeSpot) == list:
 					if move >= 0 and move < len(treeSpot):
 						treeSpot = treeSpot[move]
 					else:
-						log("Change Vector\ttraverseTree\t\tMissing position: " + str(move) + "," + str(treeSpot), "bug")
+						log("Change Vector\ttraverseTree\t\tMissing position: " + str(move) + "," + str(treeSpot) + "\n" + printFunction(t), "bug")
 						return -99
 				else:
-					log("Change Vector\ttraverseTree\t\tNot a list: " + str(treeSpot), "bug")
+					log("Change Vector\ttraverseTree\t\tNot a list: " + str(treeSpot) + "\n" + printFunction(t), "bug")
 					return -99
 
 			else: # wat?
-				log("Change Vector\ttraverseTree\t\tBad Path: " + str(move), "bug")
+				log("Change Vector\ttraverseTree\t\tBad Path: " + str(move) + "\n" + printFunction(t), "bug")
 				return -99
 		return treeSpot
 
@@ -146,7 +146,7 @@ class ChangeVector:
 			if location >= 0 and location < len(treeSpot):
 				treeSpot[location] = self.newSubtree
 			else:
-				log("ChangeVector\tapplyChange\tDoesn't fit in list: " + str(location), "bug")
+				log("ChangeVector\tapplyChange\tDoesn't fit in list: " + str(location) + "\n" + printFunction(self.start), "bug")
 		else:
 			log("ChangeVector\tapplyChange\t\tBroken at: " + str(location), "bug")
 		return tree

@@ -289,10 +289,9 @@ def propagatedVariableSpecialFunction(cv, replacedVariables):
 def helperFoldingSpecialFunction(cv, orig):
 	if hasattr(cv.oldSubtree, "helperVar") or hasattr(cv.oldSubtree, "helperReturnVal") or \
 		hasattr(cv.oldSubtree, "helperParamAssign") or hasattr(cv.oldSubtree, "helperReturnAssn"):
-		log("Oh no! helper function!" + "\n" + str(cv) + "\n" + \
+		log("Oh no! helper function!" + "\n" + str(cv) + "\n" + str(edit) + "\n" + \
 					printFunction(cv.start, 0) + "\n" + \
 					printFunction(orig, 0), "bug")
-		raise Exception("See above")
 	return cv
 
 def noneSpecialFunction(cv):
@@ -320,7 +319,7 @@ def noneSpecialFunction(cv):
 				cv.newSubtree.step = tmpNew
 			cv.path = cv.path[1:] # get rid of None and the val
 		else:
-			log("Individualize\tmapEdit\tMissing option in None special case: " + str(cv.path[0]), "bug")
+			log("Individualize\tmapEdit\tMissing option in None special case 1: " + str(cv.path[0]), "bug")
 	elif cv.oldSubtree == "None":
 		cv.path = cv.path[1:] # get rid of None and the id
 		cvCopy = cv.deepcopy()
@@ -328,7 +327,7 @@ def noneSpecialFunction(cv):
 		if cv.path[0] == ('value', 'Return'):
 			cv.newSubtree = ast.Return(ast.Name(cv.newSubtree, ast.Load()))
 		else:
-			log("Individualize\tmapEdit\tMissing option in None special case: " + str(cv.path[0]), "bug")
+			log("Individualize\tmapEdit\tMissing option in None special case 2: " + str(cv.path[0]), "bug")
 		cv.path = cv.path[1:]
 	return cv
 
@@ -798,9 +797,13 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			if tmpPath != None:
 				cv.path = tmpPath
 			else:
-				log("Individualize\tno path 1\t" + str(cv) + "\n" + str(edit) + "\n" + \
-							printFunction(cv.start, 0) + "\n" + \
-							printFunction(oldStart, 0), "bug")
+				extra_s = "varGlobalId" if hasattr(cv.oldSubtree, "variableGlobalId") else "globalId"
+				log("Individualize\tno path 1\t" + extra_s + "\t" + str(cv) + "\n" +
+							"EDIT: " + str(edit) + "\n" + \
+							"ORIGINAL EDIT: " + str(originalEdit) + "\n" + \
+							"CANON START: " + printFunction(oldStart) + "\n" + \
+							"ORIG START: " + printFunction(cv.start) + "\n" + \
+							"ORIG ORIG: " + printFunction(orig), "bug")
 		else:
 			# Otherwise, move up the path 'til you find a global id to use
 			origPath = cv.path[:]

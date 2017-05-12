@@ -205,7 +205,7 @@ def getCanonicalForm(s, given_names=None, argTypes=None):
 		stateDiff(s, "helperFolding")
 		for t in transformations:
 			s.tree = t(s.tree) # modify in place
-			stateDiff(s, str(t))
+			stateDiff(s, str(t).split()[1])
 	s.code = printFunction(s.tree)
 	s.score = orig_score
 	s.feedback = orig_feedback

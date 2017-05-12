@@ -245,6 +245,8 @@ def generateHelperDistributions(s, g, goals, states):
 			tmpG = codetest(tmpG)
 			if tmpG.score != 1:
 				log("generateNextStates\tgenerateHelperDistributions\tBad helper remapping: " + str(map), "bug")
+				log(s.code, "bug")
+				log(printFunction(s.orig_tree), "bug")
 				log(g.code, "bug")
 				log(tmpCode, "bug")
 			allFuns.append(tmpG)
@@ -365,6 +367,8 @@ def generateVariableDistributions(s, g, goals, states):
 			tmpG = codetest(tmpG)
 			if tmpG.score != 1:
 				log("generateNextStates\tgenerateVariablesDistributions\tBad variable remapping: " + str(map), "bug")
+				log(s.code, "bug")
+				log(printFunction(s.orig_tree), "bug")
 				log(g.code, "bug")
 				log(tmpCode, "bug")
 			allFuns.append(tmpG)
