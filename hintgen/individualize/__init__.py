@@ -132,6 +132,13 @@ def mapNames(a, d):
 	if type(a) == ast.FunctionDef:
 		if a.name in d:
 			a.name = d[a.name]
+		else:
+			if isAnonVariable(a.name): # if it's a variable that won't be getting mapped
+				# How many new vars are there already?
+				num = countNewVarsInD(d)
+				d[a.name] = "new_var_" + str(num)
+				a.name = d[a.name]
+				a.alreadyMapped = True
 	elif type(a) == ast.arg:
 		if not hasattr(a, "alreadyMapped"):
 			if a.arg in d:
