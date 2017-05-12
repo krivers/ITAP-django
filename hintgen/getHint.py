@@ -86,9 +86,13 @@ def do_hint_chain(code, user, problem, interactive=False):
 		elif state.score != 1:
 			s = "NO NEXT STEP"
 			log(s + "\n" + printedStates, "bug")
-			log("Scores: " + str(state.score) + "," + str(state.goal.score), "bug")
-			log("Feedback: " + str(state.feedback) + "," + str(state.goal.feedback), "bug")
-			log("DIFF: " + str(diffAsts.diffAsts(state.tree, state.goal.tree)), "bug")
+			log("Scores: " + str(state.score), "bug")
+			log("Feedback: " + str(state.feedback), "bug")
+			if state.goal != None:
+				log("THERE'S A GOAL", "bug")
+				log("Score: " + str(state.goal.score), "bug")
+				log("Feedback: " + str(state.goal.feedback), "bug")
+				log("DIFF: " + str(diffAsts.diffAsts(state.tree, state.goal.tree)), "bug")
 			return s, chrCount, editCount, orig_state, None
 		else: # break out when the score reaches 1
 			break
@@ -439,7 +443,6 @@ def generate_canonical_state(cleaned_state, anon_state, given_names):
 			canonical_state.tree = prev_tree
 			canonical_state.orig_tree = orig_tree
 			canonical_state.orig_tree_source = tree_to_str(orig_tree)
-
 	return canonical_state
 
 def generate_states(source_state, given_names):
