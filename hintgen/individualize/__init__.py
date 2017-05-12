@@ -968,6 +968,8 @@ def mapEdit(canon, orig, edit, nameMap=None):
 		if not (isinstance(cv, AddVector) or isinstance(cv, DeleteVector) or isinstance(cv, SubVector) or isinstance(cv, SuperVector) or isinstance(cv, SwapVector) or isinstance(cv, MoveVector)) and hasattr(cv.oldSubtree, "global_id"):
 			alreadyEdited.append(cv.oldSubtree.global_id)
 		updatedOrig = edit[count].applyChange()
+		if updatedOrig == None:
+			log("UH OH " + str(edit[count]), "bug")
 		count += 1
 
 	# In case any of our edits have gotten cancelled out, delete them.
