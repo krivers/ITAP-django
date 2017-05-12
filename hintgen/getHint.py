@@ -375,15 +375,13 @@ def generate_cleaned_state(source_state):
 
 def generate_anon_state(cleaned_state, given_names):
 	# Mid-level: just anonymize the variable names TODO variableMap
+	orig_tree = deepcopy(cleaned_state.tree)
+	runGiveIds(orig_tree)
+	anon_tree = deepcopy(orig_tree)
+	anon_tree = anonymizeNames(anon_tree, given_names)
 	if cleaned_state.count > 1 and cleaned_state.anon != None:
 		anon_state = cleaned_state.anon
-		anon_state.tree = str_to_tree(anon_state.tree_source)
-		anon_state.orig_tree = str_to_tree(anon_state.orig_tree_source)
 	else:
-		orig_tree = deepcopy(cleaned_state.tree)
-		runGiveIds(orig_tree)
-		anon_tree = deepcopy(orig_tree)
-		anon_tree = anonymizeNames(anon_tree, given_names)
 		anon_code = printFunction(anon_tree)
 		prior_anon = list(AnonState.objects.filter(problem=cleaned_state.problem, code=anon_code))
 		if len(prior_anon) == 0:
@@ -396,27 +394,27 @@ def generate_anon_state(cleaned_state, given_names):
 				log("getHint\tgenerate_anon_state\tDuplicate code entries in anon: " + anon_code, "bug")
 			anon_state = prior_anon[0]
 			anon_state.count += 1
-		anon_state.tree = anon_tree
-		anon_state.tree_source = tree_to_str(anon_tree)
-		anon_state = test(anon_state, forceRetest=True)
-		if anon_state.score != cleaned_state.score:
-			log("getHint\tgenerate_anon_state\tScore mismatch: " + \
-				str(cleaned_state.score) + "," + str(anon_state.score) + "\n" + \
-				cleaned_state.code + "\n" + anon_state.code, "bug")
-		anon_state.orig_tree = orig_tree
-		anon_state.orig_tree_source = tree_to_str(orig_tree)
+	anon_state.tree = anon_tree
+	anon_state.tree_source = tree_to_str(anon_tree)
+	anon_state = test(anon_state, forceRetest=True)
+	if anon_state.score != cleaned_state.score:
+		log("getHint\tgenerate_anon_state\tScore mismatch: " + \
+			str(cleaned_state.score) + "," + str(anon_state.score) + "\n" + \
+			cleaned_state.code + "\n" + anon_state.code, "bug")
+	anon_state.orig_tree = orig_tree
+	anon_state.orig_tree_source = tree_to_str(orig_tree)
 	return anon_state
 
 def generate_canonical_state(cleaned_state, anon_state, given_names):
 	# Second level of abstraction: canonicalize the AST. Gets rid of redundancies.
 	args = eval(anon_state.problem.arguments)
+	orig_tree = deepcopy(cleaned_state.tree)
+	runGiveIds(orig_tree)
 	if type(args) != dict:
 		log("getHint\tgenerate_canonical_state\tBad args format: " + anon_state.problem.arguments, "bug")
 		args = { }
 	if anon_state.count > 1 and anon_state.canonical != None:
 		canonical_state = anon_state.canonical
-		orig_tree = deepcopy(cleaned_state.tree)
-		runGiveIds(orig_tree)
 		canonical_state.orig_tree = orig_tree
 		canonical_state.orig_tree_source = tree_to_str(canonical_state.orig_tree)
 		canonical_state.tree = deepcopy(canonical_state.orig_tree)
@@ -425,8 +423,6 @@ def generate_canonical_state(cleaned_state, anon_state, given_names):
 		canonical_state = CanonicalState(code=cleaned_state.code, problem=cleaned_state.problem,
 										 score=cleaned_state.score, count=1, 
 										 feedback=cleaned_state.feedback)
-		orig_tree = deepcopy(cleaned_state.tree)
-		runGiveIds(orig_tree)
 		canonical_state.orig_tree = orig_tree
 		canonical_state.orig_tree_source = tree_to_str(canonical_state.orig_tree)
 		canonical_state.tree = deepcopy(canonical_state.orig_tree)
