@@ -1640,7 +1640,9 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True, inLoop=False):
 				if len(stmt.body) == 0 and len(stmt.orelse) == 0:
 					# Get rid of the if and keep going
 					if couldCrash(stmt.test) or containsTokenStepString(stmt.test):
-						a[i] = ast.Expr(stmt.test, collapsedExpr=True)
+						newStmt = ast.Expr(stmt.test, collapsedExpr=True)
+						transferMetaData(stmt, newStmt)
+						a[i] = newStmt
 					else:
 						a.pop(i)
 					i -= 1
@@ -1926,7 +1928,11 @@ def orderCommutativeOperations(a):
 		a = applyToChildren(a, orderCommutativeOperations)
 		# If the else is (strictly) shorter than the body, switch them
 		if len(a.orelse) != 0 and len(a.body) > len(a.orelse):
-			a.test = deMorganize(ast.UnaryOp(ast.Not(addedNotOp=True), a.test, negated=True, global_id=a.test.global_id))
+			newTest = ast.UnaryOp(ast.Not(addedNotOp=True), a.test)
+			transferMetaData(a.test, newTest)
+			newTest.negated = True
+			deMorganize(newTest)
+			a.test = newTest
 			(a.body,a.orelse) = (a.orelse,a.body)
 
 		# Then collect all the branches. The leftover orelse is the final else
@@ -2546,7 +2552,9 @@ def conditionalRedundancy(a):
 					stmt.moved_line = nextLine.global_id
 					# Remove the if statement if both if and else are empty
 					if len(stmt.body) == 0 and len(stmt.orelse) == 0:
-						a[i:i+1] = [ast.Expr(stmt.test, global_id=stmt.global_id), nextLine]
+						newLine = ast.Expr(stmt.test)
+						transferMetaData(stmt, newLine)
+						a[i:i+1] = [newLine, nextLine]
 					# Switch if and else if if is empty
 					elif len(stmt.body) == 0:
 						stmt.test = ast.UnaryOp(ast.Not(addedNotOp=True), stmt.test, addedNot=True)
@@ -2652,9 +2660,11 @@ def collapseConditionals(a):
 								newVal = ast.UnaryOp(ast.Not(addedNotOp=True), testVal, negated=True, collapsedExpr=True)
 
 							if type(ifLine) == ast.Assign:
-								l[i] = ast.Assign(ifLine.targets, newVal, global_id=l[i].global_id)
+								newLine = ast.Assign(ifLine.targets, newVal)
 							else:
-								l[i] = ast.Return(newVal, global_id=l[i].global_id)
+								newLine = ast.Return(newVal)
+							transferMetaData(l[i], newLine)
+							l[i] = newLine
 				# Next, check to see if we can collapse across the if and surrounding lines
 				elif len(l[i].body) == 1 and len(l[i].orelse) == 0:
 					ifLine = l[i].body[0]
@@ -2677,9 +2687,11 @@ def collapseConditionals(a):
 							if eventualType(l[i].test) == bool:
 								testVal = l[i].test
 								if ifLine.value.id == 'True':
-									l[i] = ast.Return(testVal,global_id=l[i].global_id)
+									newLine = ast.Return(testVal)
 								else:
-									l[i] = ast.Return(ast.UnaryOp(ast.Not(addedNotOp=True), testVal, negated=True, collapsedExpr=True),global_id=l[i].global_id)
+									newLine = ast.Return(ast.UnaryOp(ast.Not(addedNotOp=True), testVal, negated=True, collapsedExpr=True))
+								transferMetaData(l[i], newLine)
+								l[i] = newLine
 								l.pop(i+1) # get rid of the extra return
 			elif type(stmt) == ast.FunctionDef:
 				stmt.body = collapseConditionals(stmt.body)
