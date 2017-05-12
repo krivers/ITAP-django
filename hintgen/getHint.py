@@ -127,26 +127,34 @@ def clear_solution_space(problem, keep_starter=True):
 			problem.solution = starter_state
 			problem.save()
 
+stats_problem_set = [
+				#"all_three_chars", "any_divisible", "any_first_chars", 
+				#"any_lowercase", "can_drink_alcohol", "can_make_breakfast",
+				#"convert_to_degrees", "count_all_empty_strings", 
+				#"create_number_block", "factorial", "find_root", 
+				"find_the_circle", "first_and_last", "get_extra_bagel", 
+				"go_to_gym", "has_balanced_parentheses", "has_extra_fee", 
+				"has_two_digits", "hello_world", "how_many_egg_cartons", 
+				"is_even_positive_int", "is_leap_month", "is_prime", 
+				"is_punctuation", "is_substring", "kth_digit", "last_index", 
+				"list_of_lists", "multiply_numbers", "nearest_bus_stop", 
+				"no_positive_even", "one_to_n", "over_nine_thousand", 
+				"reduce_to_positive", "second_largest", "single_pig_latin", 
+				"sum_all_even_numbers", "sum_of_digits", "sum_of_odd_digits", 
+				"was_lincoln_alive", "wear_a_coat", 
+
+				"any_lowercase", "can_drink_alcohol", "create_number_block", 
+				]
+
 def run_all_problems():
-	problems = ["allDigitsOccurIn", "automatedReadabilityIndex", "bridgeBidScore",
-				"canDrinkAlcohol", "charCount", "circleArea", "combineAllLists",
-				"convertToDegrees", "digitOccursIn", "factorial", "findRoot",
-				"findTheCircle", "friendOfFriends", "hasBalancedParentheses",
-				"hasConsecutiveDigits", "hasTwoDigits", "invertDictionary",
-				"isEvenPositiveInt", "isFactorial", "isFactorialPrime",
-				"isHappyNumber", "isLegalTriangle", "isLetterOrDigit",
-				"isPrime", "isRotation", "kthDigit", "mostAnagrams", 
-				"nearestBusStop", "nthFactorialPrime", "nthHappyNumber",
-				"onlyOneTrue", "onlyTwoTrue", "overNineThousand",
-				"parseStringToTable", "sameDigits", "sensibleTemperatureAverage",
-				"sentenceCount", "simplePigLatin", "squareIfNumber", "stockChange",
-				"sumOfSquaresOfDigits", "treasureHunt", "withinFive", "wordCount"]
+	problems = stats_problem_set
 	for problem in problems:
 		log("Running " + problem, "bug")
 		import_code_as_states("hintgen/data/"+problem+".csv", 1,
 			problem, clear_space=True, run_profiler=True)
 
-def test_solution_space(problems):
+def test_solution_space():
+	problems = stats_problem_set
 	for problem in problems:
 		for count in range(20):
 			log("Running " + problem + " " + str(count), "bug")
@@ -156,21 +164,7 @@ def test_solution_space(problems):
 
 
 def run_all_spaces(keyword):
-	problems = ["all_three_chars", "any_divisible", "any_first_chars", 
-				"any_lowercase", "can_make_breakfast", "can_drink_alcohol", 
-				"convert_to_degrees", "count_all_empty_strings", 
-				"create_number_block", "factorial", "find_root", 
-				"find_the_circle", "first_and_last", "get_extra_bagel", 
-				"go_to_gym", "has_extra_fee", "has_balanced_parentheses", 
-				"has_two_digits", "hello_world", "how_many_egg_cartons", 
-				"is_leap_month", "is_even_positive_int", "is_prime", 
-				"is_punctuation", "is_substring", "kth_digit", "last_index", 
-				"list_of_lists", "multiply_numbers", "nearest_bus_stop", 
-				"no_positive_even", "one_to_n", "over_nine_thousand", 
-				"reduce_to_positive", "second_largest", "single_pig_latin", 
-				"sum_all_even_numbers", "sum_of_odd_digits", "sum_of_digits", 
-				"was_lincoln_alive", "wear_a_coat"
-				]
+	problems = stats_problem_set
 	for problem in problems:
 		log("Running " + problem, "bug")
 		run_solution_space_improvement("hintgen/combined_data/" + problem + ".csv", problem, keyword)
