@@ -592,9 +592,12 @@ def get_hint(source_state, hint_level="default"):
 		canonical_distance, _ = diffAsts.distance(canonical_state, canonical_state.goal, forceReweight=True)
 		if anon_distance <= canonical_distance:
 			used_state = anon_state
+			other_state = canonical_state
 		else:
 			used_state = canonical_state
+			other_state = anon_state
 
+		switched_already = False
 		while True:
 			if used_state.next == None:
 				log("getHint\tget_hint\tCould not find next state for state " + str(used_state.id), "bug")
@@ -612,15 +615,19 @@ def get_hint(source_state, hint_level="default"):
 			edit = mapEdit(used_state.tree, used_state.orig_tree, edit)
 			if len(edit) == 0:
 				if next_state.next != None:
-					if not hasattr(next_state, "orig_tree") and \
-					  (not hasattr(next_state, "orig_tree_source") or \
-					   next_state.orig_tree_source == ""):
-						log("Why no orig_tree?!?" + str(next_state), "bug")
-						next_state.orig_tree = used_state.orig_tree
-					used_state = next_state
+					# Replace used_state's next with next_state's
+					used_state.next = next_state.next
 					continue
 				else:
-					log("No edit found: " + str(used_state), "bug")
+					log("Reached dead end: " + printFunction(used_state.orig_tree) + "\n" + str(used_state.code) + "\n" + str(used_state.goal.code), "bug")
+					if not switched_already:
+						used_state = other_state # just try the other version
+						switched_already = True
+						continue
+					else:
+						source_state.edit = None
+						source_state.hint = "No hint could be generated"
+						break
 			hint = formatHints(used_state, edit, hint_level, used_state.orig_tree) # generate the right level of hint
 			source_state.edit = edit
 			source_state.hint = hint
