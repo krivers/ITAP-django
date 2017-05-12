@@ -492,23 +492,36 @@ def multiCompSpecialFunction(cv, orig, canon):
 			return cv
 	return cv
 
-def multiCompAfterSpecialFunction(cv, startingTree, startingPath):
+def movedLineAfterSpecialFunction(cv, startingTree, startingPath, orig):
 	"""Sometimes, with Move Vectors, items that got combined are no longer combined. Fix this by moving up the tree."""
 	if isinstance(cv, MoveVector):
 		cvCopy = cv.deepcopy()
 		origSpot = deepcopy(cvCopy.traverseTree(cv.start))
 		if len(origSpot) <= cv.oldSubtree or len(origSpot) <= cv.newSubtree:
-			# Change this to a ChangeVector
 			cvCopy.path = startingPath[1:]
-			canonSpot = deepcopy(cvCopy.traverseTree(startingTree))
-			newSpot = deepcopy(canonSpot)
-			if type(canonSpot) == ast.BoolOp:
+			parentSpot = deepcopy(cvCopy.traverseTree(startingTree))
+			if type(parentSpot) == ast.BoolOp:
+				# Change this to a ChangeVector at the parent's level
+				newSpot = deepcopy(parentSpot)
 				newSpot.values.insert(cv.newSubtree, newSpot.values[cv.oldSubtree])
 				newSpot.values.pop(cv.oldSubtree + (0 if cv.oldSubtree < cv.newSubtree else 1)) # adjust for length change
+				cv = ChangeVector(cv.path[2:], parentSpot, newSpot, cv.start)
+				cv.wasMoveVector = True
+				return cv
+			elif cv.path[1][0] == 'body': # If we're in a set of statements
+				lineToMove = parentSpot.body[cv.oldSubtree]
+				# First, just delete this line
+				if hasattr(lineToMove, "global_id"):
+					path = generatePathToId(orig, lineToMove.global_id)
+				else:
+					log("Individualize\tmovedLineAfterSpecialFunction\tWhere is the global id? " + printFunction(lineToMove), "bug")
+				firstEdit = DeleteVector(path, lineToMove, None, start=orig)
+				# Then, add the line back in, but in the correct position
+				newPath = [cv.newSubtree] + cv.path[1:]
+				secondEdit = AddVector(newPath, None, lineToMove, start=cv.start)
+				return [firstEdit, secondEdit]
 			else:
-				log("Individualize\tmapEdit\tMissing option in Move Vector special case: " + str(type(canonSpot)), "bug")
-			cv = ChangeVector(cv.path[2:], canonSpot, newSpot, cv.start)
-			cv.wasMoveVector = True
+				log("Individualize\tmapEdit\tMissing option in Move Vector special case: " + str(type(parentSpot)), "bug")
 	return cv
 
 def augAssignSpecialFunction(cv, orig):
@@ -907,7 +920,10 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			cv.oldSubtree = findId(updatedOrig, cv.oldSubtree.global_id)
 
 		# Finally, check some things that may get broken by inidividualization
-		cv = multiCompAfterSpecialFunction(cv, startingTree, startingPath)
+		cv = movedLineAfterSpecialFunction(cv, startingTree, startingPath, updatedOrig)
+		if type(cv) == list:
+			edit = edit[:count] + cv + edit[count+1:]
+			continue
 		cv.oldSubtree = mapNames(cv.oldSubtree, nameMap) #remap the names, just in case
 		cv.newSubtree = mapNames(cv.newSubtree, nameMap)
 		# Sometimes these simplifications result in an opportunity for better change vectors
