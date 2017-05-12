@@ -755,6 +755,8 @@ def mapEdit(canon, orig, edit, nameMap=None):
 	if nameMap == None:
 		nameMap = createNameMap(canon)
 	count = 0
+	originalEdit = edit
+	edit = copy.deepcopy(edit)
 	updatedOrig = deepcopy(orig)
 	replacedVariables = []
 	alreadyEdited = []
@@ -884,20 +886,27 @@ def mapEdit(canon, orig, edit, nameMap=None):
 				else:
 					path = generatePathToId(updatedOrig, spot.global_id) # get the REAL path to this point
 				if path == None:
-					log("Individualize\tno path 1.5\t" + str(cv) + "\t" + str(origPath) + "\n" + printFunction(spot) + "\n" + printFunction(cv.start), "bug")
-				# Don't change addvectors!
-				if (not isinstance(cv, AddVector)): # need to do a changevector at this location
-					cvCopy = cv.deepcopy()
-					cvCopy.path = [0] + path
-					newSpot = cvCopy.traverseTree(updatedOrig) # wait, how does this work?!
-					if type(spot) != type(newSpot):
-						cv = ChangeVector(path, spot, newSpot, start=updatedOrig)
+					log("Individualize\tno path 1.5\t" + str(cv) + "\n" +
+								"EDIT: " + str(edit) + "\n" + \
+								"ORIGINAL EDIT: " + str(originalEdit) + "\n" + \
+								"CANON START: " + printFunction(cv.start) + "\n" + \
+								"ORIG START: " + printFunction(updatedOrig) + "\n" + \
+								"ORIG ORIG: " + printFunction(orig), "bug")
+					#log("Individualize\tno path 1.5\t" + str(cv) + "\t" + str(origPath) + "\n" + printFunction(spot) + "\n" + printFunction(cv.start), "bug")
+				else:
+					# Don't change addvectors!
+					if (not isinstance(cv, AddVector)): # need to do a changevector at this location
+						cvCopy = cv.deepcopy()
+						cvCopy.path = [0] + path
+						newSpot = cvCopy.traverseTree(updatedOrig) # wait, how does this work?!
+						if type(spot) != type(newSpot):
+							cv = ChangeVector(path, spot, newSpot, start=updatedOrig)
+						else:
+							cv.start = updatedOrig
+							cv.path = startPath + path
 					else:
 						cv.start = updatedOrig
 						cv.path = startPath + path
-				else:
-					cv.start = updatedOrig
-					cv.path = startPath + path
 			else:
 				log("Individualize\tno path 2\t" + str(cv) + "\t" + printFunction(cv.start, 0), "bug")
 
