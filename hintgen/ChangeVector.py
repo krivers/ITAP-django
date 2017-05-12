@@ -138,12 +138,12 @@ class ChangeVector:
 			elif type(treeSpot) == ast.arg and location[0] == "arg":
 				treeSpot.originalId = None
 		elif type(location) == int and type(treeSpot) == list:
-			if hasattr(treeSpot[location], "lineno"):
-				self.newSubtree.lineno = treeSpot[location].lineno
-			if hasattr(treeSpot[location], "col_offset"):
-				self.newSubtree.col_offset = treeSpot[location].col_offset
 			# Need to swap out whatever is in this location
 			if location >= 0 and location < len(treeSpot):
+				if hasattr(treeSpot[location], "lineno"):
+					self.newSubtree.lineno = treeSpot[location].lineno
+				if hasattr(treeSpot[location], "col_offset"):
+					self.newSubtree.col_offset = treeSpot[location].col_offset
 				treeSpot[location] = self.newSubtree
 			else:
 				log("ChangeVector\tapplyChange\tDoesn't fit in list: " + str(location) + "\n" + printFunction(self.start), "bug")
