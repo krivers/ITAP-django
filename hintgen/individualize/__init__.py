@@ -918,7 +918,8 @@ def mapEdit(canon, orig, edit, nameMap=None):
 				cv.oldSubtree = spot
 			if len(cv.path) == 0:
 				log("Individualize\tdelete vector couldn't find path" + str(cv), "bug")
-			if cv.path[1] not in [('orelse', 'If'), ('orelse', 'For'), ('orelse', 'While')]:
+			if cv.path[1] not in [('orelse', 'If'), ('orelse', 'For'), ('orelse', 'While'), 
+								  ('elts', 'List'), ('args', 'Arguments'), ('args', 'Call')]:
 				cvCopy = cv.deepcopy()
 				parent = cvCopy.traverseTree(cvCopy.start)
 				if len(parent) < 2:
