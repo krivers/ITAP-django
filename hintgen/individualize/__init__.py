@@ -1,7 +1,7 @@
 import ast, copy
 from ..path_construction import diffAsts, generateNextStates
 from ..ChangeVector import *
-from ..astTools import negate, isAnonVariable, removePropertyFromAll, transferMetaData
+from ..astTools import negate, num_negate, isAnonVariable, removePropertyFromAll, transferMetaData, isStatement, compareASTs
 from ..path_construction import generateNextStates
 from ..tools import log
 from ..namesets import astNames
