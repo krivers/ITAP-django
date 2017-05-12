@@ -381,6 +381,7 @@ def generate_anon_state(cleaned_state, given_names):
 	anon_tree = anonymizeNames(anon_tree, given_names)
 	if cleaned_state.count > 1 and cleaned_state.anon != None:
 		anon_state = cleaned_state.anon
+		anon_state.count += 1
 	else:
 		anon_code = printFunction(anon_tree)
 		prior_anon = list(AnonState.objects.filter(problem=cleaned_state.problem, code=anon_code))
@@ -419,6 +420,7 @@ def generate_canonical_state(cleaned_state, anon_state, given_names):
 		canonical_state.orig_tree_source = tree_to_str(canonical_state.orig_tree)
 		canonical_state.tree = deepcopy(canonical_state.orig_tree)
 		canonical_state = getCanonicalForm(canonical_state, given_names, args)
+		canonical_state.count += 1
 	else:
 		canonical_state = CanonicalState(code=cleaned_state.code, problem=cleaned_state.problem,
 										 score=cleaned_state.score, count=1, 
