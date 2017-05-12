@@ -308,7 +308,7 @@ def mapHelper(a, helper, idNum):
 					# Otherwise, what is going on?!?
 					returnLine = []
 					log("transformations\tmapHelper\tWeird removeCall: " + str(type(body[i])), "bug")
-			log("transformations\tmapHelper\tMapped helper function: " + helper.name, "bug")
+			#log("transformations\tmapHelper\tMapped helper function: " + helper.name, "bug")
 			body[i:i+1] = argLines + methodLines + returnLine
 		i += 1
 	return a
