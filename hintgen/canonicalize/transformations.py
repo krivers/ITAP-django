@@ -319,7 +319,7 @@ def mapVariable(a, varId, assn):
 		return a
 
 	for arg in a.args.args:
-		if arg.id == varId:
+		if arg.arg == varId:
 			return a # overriden by local variable
 	for i in range(len(a.body)):
 		line = a.body[i]
@@ -388,6 +388,8 @@ def helperFolding(a, mainFun):
 						line = body[j]
 						if type(line) == ast.FunctionDef:
 							if countOccurances(line, ast.Global) > 0: # TODO: improve this
+								break
+							if item.targets[0].id in getAllAssignedVarIds(line):
 								break
 						else: # if in scope
 							if countVariables(line, item.targets[0].id) > 0:
@@ -1267,6 +1269,38 @@ def clearBlockVars(a, liveVars):
 						if v in allVariableNamesUsed(liveVars[var]):
 							del liveVars[var]
 			return
+	elif type(a) == ast.For:
+		names = []
+		if type(a.target) == ast.Name:
+			names = [a.target.id]
+		elif type(a.target) in [ast.Tuple, ast.List]:
+			for elt in a.target.elts:
+				if type(elt) == ast.Name:
+					names.append(elt.id)
+				elif type(elt) == ast.Subscript:
+					if type(elt.value) == ast.Name:
+						names.append(elt.value.id)
+					else:
+						log("transformations\tclearBlockVars\tFor target subscript not a name: " + str(type(elt.value)), "bug")
+				else:
+					log("transformations\tclearBlockVars\tFor target not a name: " + str(type(elt)), "bug")
+		elif type(a.target) == ast.Subscript:
+			if type(a.target.value) == ast.Name:
+				names.append(a.target.value.id)
+			else:
+				log("transformations\tclearBlockVars\tFor target subscript not a name: " + str(type(a.target.value)), "bug")
+		else:
+			log("transformations\tclearBlockVars\tFor target not a name: " + str(type(a.target)), "bug")
+		for name in names:
+			if name in liveVars:
+				del liveVars[name]
+
+			liveKeys = list(liveVars.keys())
+			for var in liveKeys:
+				# Remove the variable and any variables in which it is used
+				if name in allVariableNamesUsed(liveVars[var]):
+					del liveVars[var]
+
 	for child in ast.iter_child_nodes(a):
 		clearBlockVars(child, liveVars)
 

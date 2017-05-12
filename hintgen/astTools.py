@@ -220,6 +220,19 @@ def gatherAssignedVarIds(targets):
 	vars = gatherAssignedVars(targets)
 	return [y.id for y in filter(lambda x : type(x) == ast.Name, vars)]
 
+def getAllAssignedVarIds(a):
+	if not isinstance(a, ast.AST):
+		return []
+	ids = []
+	for child in ast.walk(a):
+		if type(child) == ast.Assign:
+			ids += gatherAssignedVarIds(child.targets)
+		elif type(child) == ast.AugAssign:
+			ids += gatherAssignedVarIds([child.target])
+		elif type(child) == ast.For:
+			ids += gatherAssignedVarIds([child.target])
+	return ids
+
 def getAllFunctions(a):
 	"""Collects all the functions in the given module"""
 	if not isinstance(a, ast.AST):
