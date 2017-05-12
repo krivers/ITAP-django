@@ -179,7 +179,12 @@ def generateHelperDistributions(s, g, goals, states):
 	restricted_names = list(eval(s.problem.arguments).keys())
 	sHelpers = gatherAllHelpers(s.tree, restricted_names)
 	gHelpers = gatherAllHelpers(g.tree, restricted_names)
-	nonMappableHelpers = gatherAllFunctionNames(g.tree) - gHelpers
+	nonMappableHelpers = gatherAllFunctionNames(g.tree)
+	for pair in gHelpers: # make sure to remove all matches, regardless of whether the second part matches!
+		for item in nonMappableHelpers:
+			if pair[0] == item[0]:
+				nonMappableHelpers.remove(item)
+				break
 	randomCount = nCount = newRandomCount = 0
 	if len(sHelpers) > len(gHelpers):
 		gHelpers |= set([("random_fun" + str(i), None) for i in range(len(sHelpers) - len(gHelpers))])
@@ -250,9 +255,37 @@ def generateHelperDistributions(s, g, goals, states):
 def generateVariableDistributions(s, g, goals, states):
 	sParameters = gatherAllParameters(s.tree)
 	gParameters = gatherAllParameters(g.tree, keep_orig=False)
-	sVariables = gatherAllVariables(s.tree) - sParameters
-	gVariables = gatherAllVariables(g.tree, keep_orig=False) - gParameters
-	nonMappableVariables = gatherAllNames(g.tree, keep_orig=False) - gVariables - gParameters
+	restricted_names = list(eval(s.problem.arguments).keys()) + getAllImports(s.tree) + getAllImports(g.tree)
+	sHelpers = gatherAllHelpers(s.tree, restricted_names)
+	gHelpers = gatherAllHelpers(g.tree, restricted_names)
+	sVariables = gatherAllVariables(s.tree)
+	gVariables = gatherAllVariables(g.tree, keep_orig=False)
+	# First, just make extra sure none of the restricted names are included
+	for name in restricted_names:
+		for item in sVariables:
+			if name == item[0]:
+				sVariables.remove(item)
+				break
+		for item in gVariables:
+			if name == item[0]:
+				gVariables.remove(item)
+				break
+	for pair in sParameters | sHelpers: # make sure to remove all matches, regardless of whether the second part matches!
+		for item in sVariables:
+			if pair[0] == item[0]:
+				sVariables.remove(item)
+				break
+	for pair in gParameters | gHelpers: # make sure to remove all matches, regardless of whether the second part matches!
+		for item in gVariables:
+			if pair[0] == item[0]:
+				gVariables.remove(item)
+				break
+	nonMappableVariables = gatherAllNames(g.tree, keep_orig=False)
+	for pair in gVariables | gParameters | gHelpers: # make sure to remove all matches, regardless of whether the second part matches!
+		for item in nonMappableVariables:
+			if pair[0] == item[0]:
+				nonMappableVariables.remove(item)
+				break
 	randomCount = nCount = newRandomCount = 0
 	if len(sVariables) > len(gVariables):
 		gVariables |= set([("random" + str(i), None) for i in range(len(sVariables) - len(gVariables))])
@@ -291,13 +324,27 @@ def generateVariableDistributions(s, g, goals, states):
 	else:
 		listOfMaps = generateMappings(sList, gList)
 	allMaps = []
+	placeholdCount = 0
+	badMatches = set()
 	for map in listOfMaps:
 		d = { }
 		for pair in starterPairs: # these apply to all of them
 			d[pair[1]] = pair[0]
 		for tup in map:
-			d[tup[1]] = tup[0]
+			# Don't allow variable matching across functions!!! This just messes things up.
+			if getParentFunction(tup[0]) != getParentFunction(tup[1]) and getParentFunction(tup[0]) != None and getParentFunction(tup[1]) != None:
+				badMatches.add(tup[0])
+				badMatches.add(tup[1])
+				d["z" + str(placeholdCount) + "_newvar"] = tup[0]
+				placeholdCount += 1
+				d[tup[1]] = "z" + str(placeholdCount) + "_newvar"
+				placeholdCount += 1
+			else:
+				d[tup[1]] = tup[0]
+		placeholdCount = 0
 		allMaps.append(d)
+	if len(badMatches) > 0:
+		log("Bad Matches: " + str(badMatches), "bug")
 	allFuns = []
 	for map in allMaps:
 		tmpTree = deepcopy(g.tree)

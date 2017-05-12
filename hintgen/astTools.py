@@ -1158,11 +1158,20 @@ def isTokenStepString(s):
 		return False
 	return s[0] == "~" and s[-1] == "~"
 
+def getParentFunction(s):
+	underscoreSep = s.split("_")
+	if len(underscoreSep) == 1:
+		return None
+	result = "_".join(underscoreSep[1:])
+	if result == "newvar" or result == "global":
+		return None
+	return result
+
 def isAnonVariable(s):
 	"""Specificies whether the given string is an anonymized variable name"""
 	preUnderscore = s.split("_")[0] # the part before the function name
 	return len(preUnderscore) > 1 and \
-		preUnderscore[0] in ["g", "p", "v", "r", "n"] and \
+		preUnderscore[0] in ["g", "p", "v", "r", "n", "z"] and \
 		preUnderscore[1:].isdigit()
 
 def isDefault(a):
