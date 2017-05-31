@@ -233,6 +233,19 @@ def getAllAssignedVarIds(a):
 			ids += gatherAssignedVarIds([child.target])
 	return ids
 
+def getAllAssignedVars(a):
+	if not isinstance(a, ast.AST):
+		return []
+	vars = []
+	for child in ast.walk(a):
+		if type(child) == ast.Assign:
+			vars += gatherAssignedVars(child.targets)
+		elif type(child) == ast.AugAssign:
+			vars += gatherAssignedVars([child.target])
+		elif type(child) == ast.For:
+			vars += gatherAssignedVars([child.target])
+	return vars
+
 def getAllFunctions(a):
 	"""Collects all the functions in the given module"""
 	if not isinstance(a, ast.AST):
