@@ -1,4 +1,4 @@
-import ast, types, collections
+import ast, collections
 
 supportedLibraries = [ "string", "math", "random", "__future__", "copy" ]
 
@@ -51,7 +51,7 @@ staticBuiltInFunctions = {
 	"dir" : { () : list },
 	"divmod" : { (int, int) : tuple, (int, float) : tuple,
 				 (float, int) : tuple, (float, float) : tuple },
-	"filter" : { (types.FunctionType, collections.Iterable) : list },
+	"filter" : { (type(lambda x : x), collections.Iterable) : list },
 	"getattr" : None, 
 	"globals" : dict, 
 	"hasattr" : bool, #TODO
@@ -307,7 +307,7 @@ randomFunctions = {
 	"randint" : { (int, int) : int }, 
 	"choice" : { (collections.Iterable,) : object },
 	"shuffle" : { (collections.Iterable,) : None, 
-				  (collections.Iterable, types.FunctionType) : None },
+				  (collections.Iterable, type(lambda x : x)) : None },
 	"sample" : { (collections.Iterable, int) : list }, 
 	"random" : { () : float },
 	"uniform" : { (float, float) : float }
