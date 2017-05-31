@@ -148,7 +148,7 @@ def checkGlobalIds(a, l):
 		checkGlobalIds(f, l + [type(a)])
 
 def stateDiff(s, funName):
-	#return
+	return
 	checkGlobalIds(s.tree, [])
 	old_score = s.score
 	old_feedback = s.feedback

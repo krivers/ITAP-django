@@ -345,8 +345,6 @@ def generateVariableDistributions(s, g, goals, states):
 				d[tup[1]] = tup[0]
 		placeholdCount = 0
 		allMaps.append(d)
-	if len(badMatches) > 0:
-		log("Bad Matches: " + str(badMatches), "bug")
 	allFuns = []
 	for map in allMaps:
 		tmpTree = deepcopy(g.tree)

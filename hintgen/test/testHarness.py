@@ -225,7 +225,7 @@ def score(s, tests, returnFeedback=False):
 	
 	test_result = run_in_timer(p, 0.1)
 	if test_result != "Success":
-		log("testHarness\tscore\tTimer problem: " + test_result, "bug")
+		#log("testHarness\tscore\tTimer problem: " + test_result, "bug")
 		result = 0
 		msg = test_result
 	else:
