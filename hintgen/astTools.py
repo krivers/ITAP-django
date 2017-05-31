@@ -405,8 +405,8 @@ def negate(op):
 		newOp = ast.NotIn()
 	elif top == ast.NotIn:
 		newOp = ast.In()
-	elif top == ast.Name and op.id in ["True", "False"]:
-		op.id = "False" if op.id == "True" else "True"
+	elif top == ast.NameConstant and op.value in [True, False]:
+		op.value = not op.value
 		op.negated = neg
 		return op
 	elif top == ast.Compare:
@@ -863,14 +863,15 @@ def compareASTs(a, b, checkEquality=False):
 		if ad != bd:
 			return bd - ad
 
-	# Names are special
+	# NameConstants are special
+	if type(a) == ast.NameConstant:
+		if a.value == None or b.value == None:
+			return 1 if a.value != None else (0 if b.value == None else -1) # short and works
+
+		if a.value in [True, False] or b.value in [True, False]:
+			return 1 if a.value not in [True, False] else (cmp(a.value, b.value) if b.value in [True, False] else -1)
+
 	if type(a) == ast.Name:
-		if a.id == "None" or b.id == "None":
-			return 1 if a.id != "None" else (0 if b.id == "None" else -1) # short and works
-
-		if a.id in ["True", "False"] or b.id in ["True", "False"]:
-			return 1 if a.id not in ["True", "False"] else (cmp(a.id, b.id) if b.id in ["True", "False"] else -1)
-
 		return cmp(a.id, b.id)
 
 	# Operations and attributes are all ok

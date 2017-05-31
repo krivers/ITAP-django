@@ -291,13 +291,13 @@ def mapHelper(a, helper, idNum):
 				comp = compareASTs(body[i].value, callExpression, checkEquality=True) == 0
 				if type(body[i]) == ast.Return and comp:
 					# In the case of a return, we can return None, it's cool
-					callVal = ast.Name("None", ast.Load(), helperReturnVal=True)
+					callVal = ast.NameConstant(None, helperReturnVal=True)
 					transferMetaData(callExpression, callVal)
 					returnVal = ast.Return(callVal, global_id=body[i].global_id, helperReturnAssign=True)
 					returnLine = [returnVal]
 				elif type(body[i]) == ast.Assign and comp:
 					# Assigns can be assigned to None
-					callVal = ast.Name("None", ast.Load(), helperReturnVal=True)
+					callVal = ast.NameConstant(None, helperReturnVal=True)
 					transferMetaData(callExpression, callVal)
 					assignVal = ast.Assign(body[i].targets, callVal, global_id=body[i].global_id, helperReturnAssign=True)
 					returnLine = [assignVal]
@@ -1006,11 +1006,11 @@ def constantFolding(a):
 		# Check whether the two sides are the same
 		comp = compareASTs(l, r, checkEquality=True) == 0
 		if comp and (not couldCrash(l)) and type(op) in [ast.Lt, ast.Gt, ast.NotEq]:
-			tmp = ast.Name("False", ast.Load())
+			tmp = ast.NameConstant(False)
 			transferMetaData(a, tmp)
 			return tmp
 		elif comp and (not couldCrash(l)) and type(op) in [ast.Eq, ast.LtE, ast.GtE]:
-			tmp = ast.Name("True", ast.Load())
+			tmp = ast.NameConstant(True)
 			transferMetaData(a, tmp)
 			return tmp
 		if (type(l) in builtInTypes) and (type(r) in builtInTypes):
@@ -1623,12 +1623,19 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True, inLoop=False):
 			elif t == ast.If:
 				# First, if True/False, just replace it with the lines
 				test = a[i].test
-				if type(test) == ast.Name and test.id in ["True", "False"]:
-					if test.id == "True":
-						a[i:i+1] = a[i].body
+				if type(test) == ast.NameConstant and test.value in [True, False]:
+					assignedVars = getAllAssignedVars(a[i])
+					for var in assignedVars:
+						# UNLESS we have a weird variable assignment problem
+						if var.id[0] == "g" and hasattr(var, "originalId"):
+							log("canonicalize\tdeadCodeRemoval\tWeird global variable: " + printFunction(a[i]), "bug")
+							break
 					else:
-						a[i:i+1] = a[i].orelse
-					continue
+						if test.value == True:
+							a[i:i+1] = a[i].body
+						else:
+							a[i:i+1] = a[i].orelse
+						continue
 				# For if statements, see if you can shorten things
 				liveVars1 = copy.deepcopy(liveVars)
 				liveVars2 = copy.deepcopy(liveVars)
@@ -2138,15 +2145,18 @@ def deMorganize(a):
 				return a
 			oper.operand.negated = not oper.operand.negated if hasattr(oper.operand, "negated") else True
 			return oper.operand
-		# not True, False, None
-		elif top == ast.Name:
-			if oper.id in ["True", "False"]:
-				return negate(oper)
-			elif oper.id == "None":
-				tmp = ast.Name("True", ast.Load())
-				transferMetaData(oper, tmp)
+		elif top == ast.NameConstant:
+			if oper.value in [True, False]:
+				oper = negate(oper)
+				transferMetaData(a, oper)
+				return oper
+			elif oper.value == None:
+				tmp = ast.NameConstant(True)
+				transferMetaData(a, tmp)
 				tmp.negated = True
 				return tmp
+			else:
+				log("Unknown NameConstant: " + str(oper.value), "bug")
 
 	return applyToChildren(a, deMorganize)
 
@@ -2166,13 +2176,13 @@ def cleanupEquals(a):
 		l = a.left = cleanupEquals(a.left)
 		r = cleanupEquals(a.comparators[0])
 		a.comparators = [r]
-		if type(l) == ast.Name and l.id in ["True", "False"]:
+		if type(l) == ast.NameConstant and l.value in [True, False]:
 			(l,r) = (r,l)
 		# If we have (boolean expression) == True
-		if type(r) == ast.Name and r.id in ["True", "False"] and (eventualType(l) == bool):
+		if type(r) == ast.NameConstant and r.value in [True, False] and (eventualType(l) == bool):
 			# Matching types
-			if (type(a.ops[0]) == ast.Eq and r.id == "True") or \
-				(type(a.ops[0]) == ast.NotEq and r.id == "False"):
+			if (type(a.ops[0]) == ast.Eq and r.value == True) or \
+				(type(a.ops[0]) == ast.NotEq and r.value == False):
 				transferMetaData(a, l) # make sure to keep the original location
 				return l
 			else:
