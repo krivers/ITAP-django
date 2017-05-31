@@ -372,12 +372,15 @@ def helperFolding(a, mainFun):
 						else:
 							# If we satisfy these requirements, translate the body of the function into all functions that call it
 							gone = True
+							used = False
 							for j in range(len(body)):
 								if i != j and type(body[j]) == ast.FunctionDef:
+									if countVariables(body[j], item.name) > 0:
+										used = True
 									mapHelper(body[j], item, globalCounter)
 									if countVariables(body[j], item.name) > 0:
 										gone = False
-							if gone:
+							if used and gone:
 								body.pop(i)
 								continue
 		elif type(item) == ast.Assign:
