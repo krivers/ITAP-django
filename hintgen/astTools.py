@@ -379,6 +379,8 @@ def num_negate(op):
 
 def negate(op):
 	"""Return the negation of the provided operator"""
+	if op == None:
+		return None
 	top = type(op)
 	neg = not op.negated if hasattr(op, "negated") else True
 	if top == ast.And:
