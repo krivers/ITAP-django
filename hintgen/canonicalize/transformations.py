@@ -1228,6 +1228,17 @@ def propagateValues(a, liveVars):
 			for var in allVars:
 				if (var in liveVars) and (eventualType(var) not in [int, float, bool, str]):
 					del liveVars[var]
+		elif type(a.func) == ast.Name and a.func.id in liveVars and \
+				eventualType(liveVars[a.func.id]) in [int, float, complex, bytes, bool, type(None)]:
+			# Special case: don't move a simple value to the front of a Call
+			# because it will cause a compiler error instead of a runtime error
+			a.args = propagateValues(a.args, liveVars)
+			a.keywords = propagateValues(a.keywords, liveVars)
+			return a
+	elif type(a) == ast.Attribute:
+		if type(a.value) == ast.Name and a.value.id in liveVars and \
+				eventualType(liveVars[a.value.id]) in [int, float, complex, bytes, bool, type(None)]:
+			# Don't move for the same reason as above
 			return a
 	return applyToChildren(a, lambda x: propagateValues(x, liveVars))
 
