@@ -115,7 +115,7 @@ class ChangeVector:
 				return -99
 		return treeSpot
 
-	def applyChange(self):
+	def applyChange(self, caller=None):
 		tree = deepcopy(self.start)
 		treeSpot = self.traverseTree(tree)
 		if treeSpot == -99:
@@ -131,6 +131,8 @@ class ChangeVector:
 					self.newSubtree.lineno = oldSpot.lineno
 				if hasattr(oldSpot, "col_offset"):
 					self.newSubtree.col_offset = oldSpot.col_offset
+			if compareASTs(oldSpot, self.oldSubtree, checkEquality=True) != 0:
+				log("ChangeVector\tapplyChange\t" + str(caller) + "\t" + "Change old values don't match: " + str(self) + "\n" + str(printFunction(self.start)), "bug")
 			setattr(treeSpot, location[0], self.newSubtree)
 			# SPECIAL CASE. If we're changing the variable name, get rid of originalId
 			if type(treeSpot) == ast.Name and location[0] == "id":
@@ -219,7 +221,7 @@ class AddVector(ChangeVector):
 		c = AddVector(path, deepcopy(self.oldSubtree), deepcopy(self.newSubtree), start=deepcopy(self.start))
 		return c
 
-	def applyChange(self):
+	def applyChange(self, caller=None):
 		tree = deepcopy(self.start)
 		treeSpot = self.traverseTree(tree)
 		if treeSpot == -99:
@@ -289,7 +291,7 @@ class DeleteVector(ChangeVector):
 		c = DeleteVector(path, deepcopy(self.oldSubtree), deepcopy(self.newSubtree), start=deepcopy(self.start))
 		return c
 
-	def applyChange(self):
+	def applyChange(self, caller=None):
 		tree = deepcopy(self.start)
 		treeSpot = self.traverseTree(tree)
 		if treeSpot == -99:
@@ -300,6 +302,8 @@ class DeleteVector(ChangeVector):
 		if type(treeSpot) == list:
 			# Remove the old line
 			if location < len(treeSpot):
+				if compareASTs(treeSpot[location], self.oldSubtree, checkEquality=True) != 0:
+					log("DeleteVector\tapplyChange\t" + str(caller) + "\t" + "Delete old values don't match: " + str(self) + "\n" + str(printFunction(self.start)), "bug")
 				del treeSpot[location]
 			else:
 				log("DeleteVector\tapplyChange\t\tBad location: " + str(location) + "\t" + str(self.oldSubtree), "bug")
@@ -354,7 +358,7 @@ class SwapVector(ChangeVector):
 		c.newPath = self.newPath[:] if self.newPath != None else None
 		return c
 
-	def applyChange(self):
+	def applyChange(self, caller=None):
 		tree = deepcopy(self.start)
 
 		if self.oldPath == None:
@@ -484,7 +488,7 @@ class MoveVector(ChangeVector):
 		c = MoveVector(path, deepcopy(self.oldSubtree), deepcopy(self.newSubtree), start=deepcopy(self.start))
 		return c
 
-	def applyChange(self):
+	def applyChange(self, caller=None):
 		tree = deepcopy(self.start)
 		treeSpot = self.traverseTree(tree)
 		if treeSpot == -99:

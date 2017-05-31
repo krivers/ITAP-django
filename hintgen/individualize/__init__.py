@@ -276,7 +276,7 @@ def propagatedVariableSpecialFunction(cv, replacedVariables):
 	if hasattr(cv.oldSubtree, "propagatedVariable"):
 		# need to move up in the tree until we hit the initial variable assigned
 		cvCopy = cv.deepcopy()
-		newTree = cvCopy.applyChange()
+		newTree = cvCopy.applyChange(caller="propagatedVariableSpecialFunction")
 		oldSpot = cvCopy.oldSubtree
 		newSpot = cvCopy.newSubtree
 		cvCopy.path = [-1] + cvCopy.path
@@ -434,7 +434,7 @@ def multiCompSpecialFunction(cv, orig, canon):
 	if hasattr(cv.oldSubtree, "multiCompOp") and cv.oldSubtree.multiCompOp:
 		cvCopy = cv.deepcopy()
 		oldSpot = deepcopy(cv.traverseTree(canon))
-		treeResult = cvCopy.applyChange()
+		treeResult = cvCopy.applyChange(caller="multiCompSpecialFunction 1")
 		newSpot = deepcopy(cvCopy.traverseTree(treeResult))
 		cv = ChangeVector(cvCopy.path, oldSpot, ast.BoolOp(cv.newSubtree, [newSpot]), cv.start)
 		return cv
@@ -483,7 +483,7 @@ def multiCompSpecialFunction(cv, orig, canon):
 				oldSpot = getattr(oldSpot, oldCvCopy.path[0][0])
 
 			newCvCopy = cv.deepcopy()
-			newTree = newCvCopy.applyChange()
+			newTree = newCvCopy.applyChange(caller="multiCompSpecialFunction 2")
 			newCvCopy.path = newCvCopy.path[i:]
 			newSpot = newCvCopy.traverseTree(newTree)
 
@@ -530,7 +530,7 @@ def augAssignSpecialFunction(cv, orig):
 		# First, create the oldTree and newTree in full
 		cvCopy = cv.deepcopy()
 		cvCopy.start = deepcopy(cv.start)
-		newTree = cvCopy.applyChange()
+		newTree = cvCopy.applyChange(caller="augAssignSpecialFunction")
 
 		# This should be in an augassign, move up in the tree until we reach it.
 		spot = cv.oldSubtree
@@ -595,7 +595,7 @@ def conditionalSpecialFunction(cv, orig):
 		if hasattr(combinedSpot, "combinedConditional"):
 			# First, see if we can just find a single tree that corresponds to this in the original code
 			cvCopy2 = cv.deepcopy()
-			newTree = cvCopy2.applyChange()
+			newTree = cvCopy2.applyChange(caller="conditionalSpecialFunction")
 			if hasattr(combinedSpot, "global_id"): # we can find this in the original tree
 				newSpot = cvCopy.traverseTree(newTree)
 				newCv = ChangeVector(cvCopy.path[1:], combinedSpot, newSpot, start=cv.start)
@@ -779,7 +779,7 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			cv.start = updatedOrig
 			cv.path = generatePathToId(updatedOrig, cv.oldSubtree.global_id)
 			edit[count] = cv
-			updatedOrig = edit[count].applyChange()
+			updatedOrig = edit[count].applyChange(caller="mapEdit 1")
 			count += 1
 			continue
 		cv = propagatedVariableSpecialFunction(cv, replacedVariables)
@@ -967,7 +967,7 @@ def mapEdit(canon, orig, edit, nameMap=None):
 		edit[count] = cv
 		if not (isinstance(cv, AddVector) or isinstance(cv, DeleteVector) or isinstance(cv, SubVector) or isinstance(cv, SuperVector) or isinstance(cv, SwapVector) or isinstance(cv, MoveVector)) and hasattr(cv.oldSubtree, "global_id"):
 			alreadyEdited.append(cv.oldSubtree.global_id)
-		updatedOrig = edit[count].applyChange()
+		updatedOrig = edit[count].applyChange(caller="mapEdit 2")
 		if updatedOrig == None:
 			log("UH OH " + str(edit[count]), "bug")
 		count += 1
