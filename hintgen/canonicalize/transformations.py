@@ -1498,9 +1498,14 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True, inLoop=False):
 						a.body.pop(i)
 				else:
 					namesSeen.append(a.body[i].name)
+			elif type(a.body[i]) == ast.Assign:
+				namesSeen += gatherAssignedVars(a.body[i].targets)
 			i -= 1
+		liveVars |= set(namesSeen) # make sure all global names are used!
 
 	if type(a) in [ast.Module, ast.FunctionDef]:
+		if type(a) == ast.Module and len(a.body) == 0:
+			return a # just don't mess with it
 		gid = a.body[0].global_id if len(a.body) > 0 and hasattr(a.body[0], "global_id") else None
 		a.body = deadCodeRemoval(a.body, liveVars=liveVars, keepPrints=keepPrints, inLoop=inLoop)
 		if len(a.body) == 0:
@@ -1617,17 +1622,12 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True, inLoop=False):
 
 				# We need to make ALL variables in the loop live, since they update continuously
 				liveVars |= set(allVariableNamesUsed(stmt))
+				old_global_id = stmt.body[0].global_id
 				stmt.body = deadCodeRemoval(stmt.body, copy.deepcopy(liveVars), keepPrints=keepPrints, inLoop=True)
 				stmt.orelse = deadCodeRemoval(stmt.orelse, copy.deepcopy(liveVars), keepPrints=keepPrints, inLoop=inLoop)
 				# If the body is empty, get rid of it!
 				if len(stmt.body) == 0:
-					if couldCrash(stmt.test) or containsTokenStepString(stmt.test):
-						a[i] = ast.Expr(stmt.test, collapsedExpr=True)
-					else:
-						a.pop(i)
-
-					if len(stmt.orelse) > 0:
-						a[i:i+1] = a[i] + stmt.orelse
+					stmt.body = [ast.Pass(removedLines=True, global_id=old_global_id)]
 			elif t == ast.If:
 				# First, if True/False, just replace it with the lines
 				test = a[i].test
