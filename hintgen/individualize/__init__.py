@@ -436,6 +436,7 @@ def multiCompSpecialFunction(cv, orig, canon):
 			log("individualize\tmultiComp\tWhere's the parent path: " + str(parentPath), "bug")
 	# Catch other multi-comp problems
 	if hasattr(cv.oldSubtree, "multiCompOp") and cv.oldSubtree.multiCompOp:
+		# Changing the operator
 		cvCopy = cv.deepcopy()
 		oldSpot = deepcopy(cv.traverseTree(canon))
 		treeResult = cvCopy.applyChange(caller="multiCompSpecialFunction 1")
@@ -491,6 +492,7 @@ def multiCompSpecialFunction(cv, orig, canon):
 			newCvCopy.path = newCvCopy.path[i:]
 			newSpot = newCvCopy.traverseTree(newTree)
 
+			# Make a new CV that changes the whole thing
 			cv = ChangeVector(oldCvCopy.path, oldSpot, newSpot, cv.start)
 			cv.wasMoveVector = True
 			return cv
@@ -548,7 +550,6 @@ def augAssignSpecialFunction(cv, orig):
 
 		# Double check to make sure this is actually still an augassign
 		if type(spot) in [ast.Assign, ast.AugAssign] and hasattr(spot, "global_id"):
-			oldSpot = findId(orig, spot.global_id)
 			newCv = cv.deepcopy()
 			newCv.path = cv.path[i+1:]
 			newCv.oldSubtree = spot
@@ -586,8 +587,7 @@ def augAssignSpecialFunction(cv, orig):
 						log("AugAssign: " + str(diffCount), "bug")
 			else:
 				log("Mismatched types: " + str(type(newSpot)) + "," + str(type(spot)), "bug")
-			newCv.newSubtree = newSpot
-			return newCv
+			return ChangeVector(newCv.path, spot, newSpot, start=newCv.start)
 	return cv
 
 def conditionalSpecialFunction(cv, orig):
@@ -651,10 +651,8 @@ def conditionalSpecialFunction(cv, orig):
 			origSpot = testSpot.test
 			if cv.path[0] == 0:
 				values = [cv.newSubtree, origSpot]
-			elif cv.path[0] == 1:
-				values = [origSpot, cv.newSubtree]
 			else:
-				log("Individualize\tconditionalSpecialFunction\tHow to deal with adding this item?: " + str(cv), "bug")
+				values = [origSpot, cv.newSubtree]
 			newCv = SubVector(cv.path[2:], origSpot, ast.BoolOp(ast.Or(), values), start=orig)
 			return newCv
 
@@ -783,12 +781,13 @@ def mapEdit(canon, orig, edit, nameMap=None):
 	alreadyEdited = []
 	while count < len(edit):
 		cv = edit[count]
+		orig_cv = cv.deepcopy()
 		startingTree = cv.start
 		startingPath = cv.path
-
 		cv = basicTypeSpecialFunction(cv)
 		cv.oldSubtree = mapNames(cv.oldSubtree, nameMap)
 		cv.newSubtree = mapNames(cv.newSubtree, nameMap)
+		cv.start = mapNames(cv.start, nameMap) # makes checking things easier later on
 
 		# First, apply the complex special functions
 		# Sometimes we've already edited the given old subtree (like with multi-conditionals). If so, skip this step.
@@ -851,10 +850,11 @@ def mapEdit(canon, orig, edit, nameMap=None):
 					if hasattr(cv.newSubtree, "variableGlobalId"):
 						delattr(cv.newSubtree, "variableGlobalId")
 			else:
-				log("Individualize\tcouldn't find variable in original: " + printFunction(cv.oldSubtree, 0) + \
-						  "\t" + printFunction(cv.start, 0) + "\t" + printFunction(updatedOrig, 0), "bug")
+				log("Individualize\tcouldn't find variable in original: " + str(cv) + \
+						  "\n" + printFunction(cv.start) + "\n" + printFunction(updatedOrig) + "\n" + printFunction(orig), "bug")
 
 		if hasattr(cv.oldSubtree, "second_global_id"):
+			# If we're changing a boolop, delete the second conditional.
 			if type(cv.oldSubtree) == ast.If:
 				cvCopy = cv.deepcopy()
 				cvCopy.path = [-1] + generatePathToId(orig, cv.oldSubtree.second_global_id)
@@ -992,7 +992,7 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			del edit[count]
 			continue
 		edit[count] = cv
-		if not (isinstance(cv, AddVector) or isinstance(cv, DeleteVector) or isinstance(cv, SubVector) or isinstance(cv, SuperVector) or isinstance(cv, SwapVector) or isinstance(cv, MoveVector)) and hasattr(cv.oldSubtree, "global_id"):
+		if cv.isReplaceVector() and hasattr(cv.oldSubtree, "global_id"):
 			alreadyEdited.append(cv.oldSubtree.global_id)
 		updatedOrig = edit[count].applyChange(caller="mapEdit 2")
 		if updatedOrig == None:
