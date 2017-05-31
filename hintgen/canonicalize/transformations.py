@@ -1328,7 +1328,7 @@ def copyPropagation(a, liveVars=None, inLoop=False):
 		while i < len(a):
 			deleteLine = False
 			if type(a[i]) == ast.FunctionDef:
-				a[i].body = copyPropagation(a[i].body, liveVars=liveVars)
+				a[i].body = copyPropagation(a[i].body, liveVars=copy.deepcopy(liveVars))
 			elif type(a[i]) == ast.ClassDef:
 				# TODO: can we propagate values through everything after here?
 				for j in range(len(a[i].body)):
