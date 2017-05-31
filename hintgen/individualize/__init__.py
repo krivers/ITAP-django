@@ -817,23 +817,32 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			continue
 		# Apply other special functions that need less data
 		if isinstance(cv, SubVector): # for subvectors, we can grab the new tree from the old
-			(parent, pos, partialNew) = getSubtreeContext(cv.newSubtree, cv.oldSubtree)
-			# Since they're exactly equal, see if we can do a clean copy
-			if hasattr(cv.oldSubtree, "global_id"):
-				cv.oldSubtree = findId(updatedOrig, cv.oldSubtree.global_id)
-				if type(pos) == int:
-					parent[pos] = deepcopy(cv.oldSubtree)
-				else:
-					setattr(parent, pos, deepcopy(cv.oldSubtree))
-			# Otherwise, apply special functions by hand
+			context = getSubtreeContext(cv.newSubtree, cv.oldSubtree)
+			if context == None:
+				log("individualize\tgetSubtreeContext\tNone context: " + str(cv) + "\n" + printFunction(cv.start), "bug")
 			else:
-				prev_new_subtree = cv.newSubtree
-				cv = specialFunctions(cv, cv.oldSubtree, partialNew)
-				if type(pos) == int:
-					parent[pos] = cv.newSubtree
+				(parent, pos, partialNew) = context
+				# Since they're exactly equal, see if we can do a clean copy
+				if hasattr(cv.oldSubtree, "global_id"):
+					newOldTree = findId(updatedOrig, cv.oldSubtree.global_id)
+					if newOldTree != None:
+						cv.oldSubtree = newOldTree
+						if type(pos) == int:
+							parent[pos] = deepcopy(cv.oldSubtree)
+						else:
+							setattr(parent, pos, deepcopy(cv.oldSubtree))
+					else:
+						log("individualize\tmapEdit\tMissing SubVector globalId: " + str(cv) + "\n" + \
+							printFunction(updatedOrig) + "\n" + printFunction(orig), "bug")
+				# Otherwise, apply special functions by hand
 				else:
-					setattr(parent, pos, cv.newSubtree)
-				cv.newSubtree = prev_new_subtree
+					prev_new_subtree = cv.newSubtree
+					cv = specialFunctions(cv, cv.oldSubtree, partialNew)
+					if type(pos) == int:
+						parent[pos] = cv.newSubtree
+					else:
+						setattr(parent, pos, cv.newSubtree)
+					cv.newSubtree = prev_new_subtree
 		else:
 			cv = specialFunctions(cv, cv.oldSubtree, cv.newSubtree)
 
