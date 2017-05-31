@@ -506,7 +506,9 @@ def test_code(source_state):
 	return source_state
 
 def run_tests(source_state):
+	orig_code = source_state.code
 	source_state = test_code(source_state)
+	source.state.code = orig_code
 
 	args = eval(source_state.problem.arguments)
 	given_code = ast.parse(source_state.problem.given_code)
@@ -514,12 +516,17 @@ def run_tests(source_state):
 	inp = imports + (list(args.keys()) if type(args) == dict else [])
 	given_names = [str(x) for x in inp]
 
-	(cleaned_state, anon_state, canonical_state) = generate_states(source_state, given_names)
-	save_states(source_state, cleaned_state, anon_state, canonical_state)
+	if source_state.tree != None:
+		(cleaned_state, anon_state, canonical_state) = generate_states(source_state, given_names)
+		save_states(source_state, cleaned_state, anon_state, canonical_state)
+	else:
+		source_state.save()
 	return source_state
 
 def get_hint(source_state, hint_level="default"):
+	orig_code = source_state.code
 	source_state = test_code(source_state)
+	source_state.code = orig_code
 
 	# If we can't parse their solution, use a simplified version of the algorithm with textual edits
 	if source_state.tree == None:
