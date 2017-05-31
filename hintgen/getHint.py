@@ -63,7 +63,7 @@ def do_hint_chain(code, user, problem, interactive=False):
 
 			repeatingCheck = check_repeating_edits(state, allEdits, printedStates)
 			if repeatingCheck != None:
-				return repeatingCheck, chrCount, editCount, orig_state, None
+				return repeatingCheck, stepCount, chrCount, editCount, orig_state, None
 
 			if isinstance(state.edit[0], ChangeVector):
 				editCount += diffAsts.getChangesWeight(state.edit, False)
@@ -75,7 +75,7 @@ def do_hint_chain(code, user, problem, interactive=False):
 				if newTree == None:
 					s = "EDIT BROKE"
 					log(s + "\n" + printedStates, "bug")
-					return s, chrCount, editCount, orig_state, None
+					return s, stepCount, chrCount, editCount, orig_state, None
 				newFun = printFunction(newTree)
 			else: # Fixing a syntax error
 				newFun = applyChanges(state.code, state.edit)
@@ -93,7 +93,7 @@ def do_hint_chain(code, user, problem, interactive=False):
 				log("Score: " + str(state.goal.score), "bug")
 				log("Feedback: " + str(state.goal.feedback), "bug")
 				log("DIFF: " + str(diffAsts.diffAsts(state.tree, state.goal.tree)), "bug")
-			return s, chrCount, editCount, orig_state, None
+			return s, stepCount, chrCount, editCount, orig_state, None
 		else: # break out when the score reaches 1
 			break
 		if interactive:
@@ -112,7 +112,7 @@ def do_hint_chain(code, user, problem, interactive=False):
 		else:
 			s = "BROKEN"
 			log(s + "\n" + printedStates, "bug")
-	return s, chrCount, editCount, orig_state, state
+	return s, stepCount, chrCount, editCount, orig_state, state
 
 
 def clear_solution_space(problem, keep_starter=True):
@@ -299,7 +299,7 @@ def run_solution_space_improvement(f, problem_name, keyword):
 		if i % 10 == 0:
 			log("Checking distance: " + str(i), "bug")
 
-		result, syntax_edits, semantic_edits, start_state, goal_state = do_hint_chain(code, student, problem)
+		result, step_count, syntax_edits, semantic_edits, start_state, goal_state = do_hint_chain(code, student, problem)
 		start_weight = diffAsts.getWeight(start_state)
 		goal_weight = diffAsts.getWeight(goal_state) if goal_state != None else -1
 		goal_code = goal_state.code if goal_state != None else ""
