@@ -961,7 +961,23 @@ def mapEdit(canon, orig, edit, nameMap=None):
 
 		# Catch any ordering changes that won't need to be propogated to the edit in the old tree
 		if hasattr(cv.oldSubtree, "global_id"):
-			cv.oldSubtree = findId(updatedOrig, cv.oldSubtree.global_id)
+			newOldTree = findId(updatedOrig, cv.oldSubtree.global_id)
+			if newOldTree != None:
+				cv.oldSubtree = newOldTree
+			else:
+				log("individualize\tmapEdit\tCouldn't find globalId: " + str(cv) + "\n" + \
+					printFunction(updatedOrig) + "\n" + printFunction(orig), "bug")
+		elif cv.oldSubtree != None and not isinstance(cv, MoveVector) and not isinstance(cv, SwapVector):
+			if cv.path[0] in [('name', 'Function Definition'), ('attr', 'Attribute')]:
+				pass
+			else:
+				if isinstance(cv.oldSubtree, ast.AST):
+					log("individualize\tmapEdit\tDict: " + str(cv.oldSubtree.__dict__), "bug")
+				log("individualize\tmapEdit\tMissing global_id\nOriginal CV: " + str(orig_cv) + "\nNew CV: " + \
+					str(cv) + "\nFull Edit: " + str(edit) + "\nUpdated function:\n" + printFunction(cv.start) + \
+					"\nOriginal function:\n" + printFunction(orig), "bug")
+				if hasattr(orig_cv.oldSubtree, "global_id"):
+					log("individualize\tmapEdit\tGlobal ID existed before", "bug")
 
 		# Finally, check some things that may get broken by inidividualization
 		cv = movedLineAfterSpecialFunction(cv, startingTree, startingPath, updatedOrig)
