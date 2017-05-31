@@ -3,6 +3,7 @@ from ..path_construction import diffAsts, generateNextStates
 from ..ChangeVector import *
 from ..astTools import negate, num_negate, isAnonVariable, removePropertyFromAll, transferMetaData, isStatement, compareASTs
 from ..path_construction import generateNextStates
+from ..canonicalize import simplify_multicomp
 from ..tools import log
 from ..namesets import astNames
 from ..display import printFunction
@@ -985,6 +986,11 @@ def mapEdit(canon, orig, edit, nameMap=None):
 					newChanges, _ = generateNextStates.updateChangeVectors(newChanges, cv.start, cv.start)
 					edit[count:count+1] = newChanges
 					continue # don't increment count
+		elif cv.isReplaceVector() and type(cv.oldSubtree) == ast.Compare and type(cv.newSubtree) == ast.BoolOp and \
+			compareASTs(simplify_multicomp(cv.oldSubtree), cv.newSubtree, checkEquality=True) == 0:
+			# This isn't actually changing anything! Get rid of it.
+			del edit[count]
+			continue
 		edit[count] = cv
 		if not (isinstance(cv, AddVector) or isinstance(cv, DeleteVector) or isinstance(cv, SubVector) or isinstance(cv, SuperVector) or isinstance(cv, SwapVector) or isinstance(cv, MoveVector)) and hasattr(cv.oldSubtree, "global_id"):
 			alreadyEdited.append(cv.oldSubtree.global_id)

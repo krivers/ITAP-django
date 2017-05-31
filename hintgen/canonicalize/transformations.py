@@ -446,6 +446,23 @@ def simplifyUpdateId(var, variableMap, idNum):
 			var.varID = idNum[0]
 			idNum[0] += 1
 
+def simplify_multicomp(a):
+	if type(a) == ast.Compare and len(a.ops) > 1:
+		# Only do one comparator at a time. If we don't do this, things get messy!
+		comps = [a.left] + a.comparators
+		values = [ ]
+		# Compare each of the pairs
+		for i in range(len(a.ops)):
+			if i > 0:
+				# Label all nodes as middle parts so we can recognize them later
+				assignPropertyToAll(comps[i], "multiCompMiddle")
+			values.append(ast.Compare(comps[i], [a.ops[i]], [deepcopy(comps[i+1])], multiCompPart=True))
+		# Combine comparisons with and operators
+		boolOp = ast.And(multiCompOp=True)
+		boolopVal = ast.BoolOp(boolOp, values, multiComp=True, global_id=a.global_id)
+		return boolopVal
+	return a
+
 def simplify(a):
 	"""This function simplifies the usual Python AST to make it usable by our functions."""
 	if not isinstance(a, ast.AST):
@@ -520,19 +537,7 @@ def simplify(a):
 		assignVal = ast.Assign([a.target], ast.BinOp(loadedTarget, a.op, a.value, augAssignBinOp=True), global_id=a.global_id)
 		return simplify(assignVal)
 	elif type(a) == ast.Compare and len(a.ops) > 1:
-		# Only do one comparator at a time. If we don't do this, things get messy!
-		comps = [a.left] + a.comparators
-		values = [ ]
-		# Compare each of the pairs
-		for i in range(len(a.ops)):
-			if i > 0:
-				# Label all nodes as middle parts so we can recognize them later
-				assignPropertyToAll(comps[i], "multiCompMiddle")
-			values.append(ast.Compare(comps[i], [a.ops[i]], [deepcopy(comps[i+1])], multiCompPart=True))
-		# Combine comparisons with and operators
-		boolOp = ast.And(multiCompOp=True)
-		boolopVal = ast.BoolOp(boolOp, values, multiComp=True, global_id=a.global_id)
-		return simplify(boolopVal)
+		return simplify(simplify_multicomp(a))
 	return applyToChildren(a, lambda x : simplify(x))
 
 def propogateMetadata(a, argTypes, variableMap, idNum):
