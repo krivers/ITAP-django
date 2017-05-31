@@ -349,12 +349,13 @@ def getSyntaxHint(source_state, hint_level):
 	else:
 		# If that fails, do the basic path construction approach
 		allSources = SourceState.objects.filter(problem=source_state.problem).exclude(tree_source="")
+		codes = list(set([state.code for state in allSources]))
 		allChanges = []
 		bestChange = None
 		bestCode = None
 		bestLength = None
-		for state in allSources:
-			changes = getTextDiff(source_state.code, state.code)
+		for state in codes:
+			changes = getTextDiff(source_state.code, state)
 			# Now generate all possible combinations of these changes
 			(usedChange, usedCode) = getMinimalChanges(changes, source_state.code, cutoff=bestLength)
 			l = sum(len(usedChange[i].text) + len(usedChange[i].newText) for i in range(len(usedChange)))
