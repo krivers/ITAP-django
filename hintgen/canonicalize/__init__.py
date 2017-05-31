@@ -129,16 +129,16 @@ def checkGlobalIds(a, l):
 	elif type(a) in [ ast.Load, ast.Store, ast.Del, ast.AugLoad, ast.AugStore, ast.Param ]:
 		return
 	if not hasattr(a, "global_id"):
-		addedNodes = ["propagatedVariable", 
+		addedNodes = ["propagatedVariable", "orderedBinOp", 
 			"augAssignVal", "augAssignBinOp", 
 			"combinedConditional", "combinedConditionalOp", 
 			"multiCompPart", "multiCompOp",
+			"second_global_id", "moved_line",
 			# above this line has individualize functions. below does not.
 			"addedNot", "addedNotOp", "addedOther", "addedOtherOp", 
 			"collapsedExpr", "removedLines", 
 			"helperVar", "helperReturn",
-			"orderedBinOp", "typeCastFunction",
-			"second_global_id", "moved_line" ]
+			"typeCastFunction", ]
 		for t in addedNodes:
 			if hasattr(a, t):
 				break

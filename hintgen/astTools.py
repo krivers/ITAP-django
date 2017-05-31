@@ -1219,7 +1219,7 @@ def transferMetaData(a, b):
 					"addedNot", "addedNotOp", "addedOther", "addedOtherOp", "addedNeg",
 					"collapsedExpr", "removedLines",
 					"helperVar", "helperReturnVal", "helperParamAssign", "helperReturnAssign", 
-					"orderedBinOp", "typeCastFunction" ]
+					"orderedBinOp", "typeCastFunction", "moved_line" ]
 	for prop in properties:
 		if hasattr(a, prop):
 			setattr(b, prop, getattr(a, prop))

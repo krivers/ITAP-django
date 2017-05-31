@@ -2669,7 +2669,7 @@ def collapseConditionals(a):
 							# If they both return the same thing, just replace the if altogether.
 							# But keep the test in case it crashes- we'll remove it later
 							ifLine.global_id = None # we're replacing the whole if statement
-							l[i:i+1] = [ast.Expr(l[i].test, addedOther=True), ifLine]
+							l[i:i+1] = [ast.Expr(l[i].test, addedOther=True, moved_line=ifLine.global_id), ifLine]
 						elif eventualType(l[i].test) == bool:
 							testVal = l[i].test
 							if ifLine.value.id == 'True':
