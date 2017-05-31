@@ -1021,7 +1021,9 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			alreadyEdited.append(cv.oldSubtree.global_id)
 		updatedOrig = edit[count].applyChange(caller="mapEdit 2")
 		if updatedOrig == None:
-			log("UH OH " + str(edit[count]), "bug")
+			log("DELETING EDIT:" + str(edit[count]), "bug")
+			del edit[count]
+			continue
 		count += 1
 
 	# In case any of our edits have gotten cancelled out, delete them.
