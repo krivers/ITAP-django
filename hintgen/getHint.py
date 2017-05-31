@@ -207,15 +207,18 @@ def import_code_as_states(f, course_id, problem_name, clear_space=False, run_pro
 		code = line[header.index("fun")]
 
 		if run_hint_chain:
-			results = do_hint_chain(code, student, problem)
-			log(student_name + ": " + str(results[0]), "bug")
+			start_time = time.time()
+			result, step_count, syntax_edits, semantic_edits, start_state, goal_state = do_hint_chain(code, student, problem)
+			end_time = time.time()
+			results += str(line[header.index("id")]) + "\t" + str(start_state.score) + "\t" + str(end_time - start_time) + "\t" + \
+				str(result) + "\t" + str(step_count) + "\t" + str(syntax_edits) + "\t" + str(semantic_edits) + "\n"
 		else:
 			start_time = time.time()
 			state = SourceState(code=code, problem=problem, count=1, student=student)
 			state = get_hint(state)
 			state.save()
 			end_time = time.time()
-			results += str(state.id) + "\t" + str(state.score) + "\t" + str(end_time - start_time) + "\n"
+			results += str(line[header.index("id")]) + "\t" + str(state.score) + "\t" + str(end_time - start_time) + "\n"
 
 	filename = LOG_PATH + problem_name + "_" + ("chain" if run_hint_chain else "results") + ".log"
 	with open(filename, "w") as f:
