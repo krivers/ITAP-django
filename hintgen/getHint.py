@@ -174,6 +174,58 @@ def run_all_spaces(keyword):
 		log("Running " + problem, "bug")
 		run_solution_space_improvement("hintgen/combined_data/" + problem + ".csv", problem, keyword)
 
+def run_canonical_space_reduction():
+	problems = stats_problem_set
+	log("problem\tnum_syntax_errors\tnum_semantic_errors\tnum_correct\t" + \
+		"num_submissions\tnum_source_states\tnum_cleaned_states\tnum_anon_states\tnum_canonical_states\n", "bug")
+	for problem_name in problems:
+		problem = Problem.objects.get(name=problem_name)
+		clear_solution_space(problem)
+		exact_text = { }
+		last_seen = { }
+
+		table = parse_table("hintgen/combined_data/" + problem_name + ".csv")
+		header = table[0]
+		table = table[1:]
+		student_index = header.index("student_id")
+		code_index = header.index("fun")
+		for i in range(len(table)):
+			line = table[i]
+			student_name = line[student_index]
+			code = line[code_index]
+			if i > 0 and student_name in last_seen and \
+				last_seen[student_name] == code:
+				continue # skip for now
+			students = Student.objects.filter(name=student_name)
+			if len(students) == 1:
+				student = students[0]
+			else:
+				student = Student(course=course, name=student_name)
+				student.save()
+
+			state = SourceState(code=code, problem=problem, count=1, student=student)
+			state = run_tests(state)
+			state.save()
+			last_seen[student_name] = code
+			if state.tree != None:
+				if code in exact_text:
+					exact_text[code] += 1
+				else:
+					exact_text[code] = 1
+		source_states = SourceState.objects.filter(problem=problem)
+		syntax_errors = source_states.filter(treeWeight__isnull=True)
+		semantic_errors = source_states.filter(score__lt=1, treeWeight__isnull=False)
+		correct_states = source_states.filter(score=1)
+		cleaned_states = CleanedState.objects.filter(problem=problem, treeWeight__isnull=False)
+		anon_states = AnonState.objects.filter(problem=problem, treeWeight__isnull=False)
+		canonical_states = CanonicalState.objects.filter(problem=problem, treeWeight__isnull=False)
+
+		log(problem_name + "\t" + str(len(syntax_errors)) + "\t" + str(len(semantic_errors)) + "\t" + \
+			str(len(correct_states)) + "\t" + str(len(semantic_errors) + len(correct_states)) + "\t" + \
+			str(len(exact_text.keys())) + "\t" +  str(len(cleaned_states)) + "\t" + str(len(anon_states)) + "\t" + str(len(canonical_states)), "bug")
+
+
+
 def import_code_as_states(f, course_id, problem_name, clear_space=False, run_profiler=False, run_hint_chain=False):
 	if run_profiler:
 		# Set up the profiler
