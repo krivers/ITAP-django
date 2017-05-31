@@ -1946,7 +1946,7 @@ def orderCommutativeOperations(a):
 			newTest = ast.UnaryOp(ast.Not(addedNotOp=True), a.test)
 			transferMetaData(a.test, newTest)
 			newTest.negated = True
-			deMorganize(newTest)
+			newTest = deMorganize(newTest)
 			a.test = newTest
 			(a.body,a.orelse) = (a.orelse,a.body)
 
@@ -2138,6 +2138,7 @@ def deMorganize(a):
 			for i in range(len(oper.values)):
 				oper.values[i] = deMorganize(negate(oper.values[i]))
 			oper.negated = not oper.negated if hasattr(oper, "negated") else True
+			transferMetaData(a, oper)
 			return oper
 		# not a < b == a >= b
 		elif top == ast.Compare:
@@ -2145,6 +2146,7 @@ def deMorganize(a):
 			oper.ops = [negate(oper.ops[0])]
 			oper.comparators = [deMorganize(oper.comparators[0])]
 			oper.negated = not oper.negated if hasattr(oper, "negated") else True
+			transferMetaData(a, oper)
 			return oper
 		# not not blah == blah
 		elif top == ast.UnaryOp and type(oper.op) == ast.Not:
@@ -2409,15 +2411,18 @@ def cleanupNegations(a):
 				if type(a.operand.op) == ast.Add:
 					a.operand.left = cleanupNegations(ast.UnaryOp(ast.USub(addedOtherOp=True), a.operand.left, addedOther=True))
 					a.operand.op = ast.Sub(global_id=a.operand.op.global_id, num_negated=True)
+					transferMetaData(a, a.operand)
 					return a.operand
 				# -(x - y) = -x + y = y - x
 				elif type(a.operand.op) == ast.Sub:
 					if couldCrash(a.operand.left) and couldCrash(a.operand.right):
 						a.operand.left = cleanupNegations(ast.UnaryOp(ast.USub(addedOtherOp=True), a.operand.left, addedOther=True))
 						a.operand.op = ast.Add(global_id=a.operand.op.global_id, num_negated=True)
+						transferMetaData(a, a.operand)
 						return a.operand
 					else:
 						(a.operand.left,a.operand.right) = (a.operand.right,a.operand.left)
+						transferMetaData(a, a.operand)
 						return a.operand
 		return a
 	# Special case for absolute value
