@@ -101,6 +101,7 @@ def specialFunctions(cv, old, new):
 				cvCopy.newSubtree = deepcopy(parentSpot)
 				cvCopy.newSubtree.op = origNew
 				cvCopy.newSubtree.right = num_negate(cvCopy.newSubtree.right)
+				cvCopy = orderedBinOpSpecialFunction(cvCopy) # just in case
 				return cvCopy
 			else:
 				log("individualize\tspecialFunctions\tWhere are we? " + str(type(parentSpot)), "bug")
@@ -749,6 +750,23 @@ def conditionalSpecialFunction(cv, orig):
 			return newCV
 	return cv
 
+def orderedBinOpSpecialFunction(cv):
+	if hasattr(cv.oldSubtree, "orderedBinOp") and not hasattr(cv.oldSubtree, "global_id"):
+		# Move up in the tree until we reach a binop that has a global id. We'll get there eventuall because the parent has one.
+		cvCopy = cv.deepcopy()
+		newTree = cvCopy.applyChange(caller="orderedBinOpSpecialFunction")
+		cvCopy = cv.deepcopy()
+		oldSpot = cvCopy.traverseTree(cv.start)
+		while not hasattr(oldSpot, "global_id") and hasattr(oldSpot, "orderedBinOp"):
+			cvCopy.path = cvCopy.path[1:]
+			oldSpot = cvCopy.traverseTree(cv.start)
+		if not hasattr(oldSpot, "global_id"):
+			log("individualize\torderedBinOpSpecialFunction\tCan't find the global id: " + str(cv), "bug")
+		else:
+			newSpot = cvCopy.traverseTree(newTree)
+			return ChangeVector(cvCopy.path, oldSpot, newSpot, start=cv.start)
+	return cv
+
 def mapEdit(canon, orig, edit, nameMap=None):
 	if edit == None:
 		return
@@ -782,6 +800,7 @@ def mapEdit(canon, orig, edit, nameMap=None):
 			updatedOrig = edit[count].applyChange(caller="mapEdit 1")
 			count += 1
 			continue
+		cv = orderedBinOpSpecialFunction(cv)
 		cv = propagatedVariableSpecialFunction(cv, replacedVariables)
 		cv = helperFoldingSpecialFunction(cv, edit, updatedOrig)
 		cv = noneSpecialFunction(cv)
