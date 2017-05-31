@@ -524,8 +524,11 @@ def couldCrash(a):
 	elif type(a) == ast.Compare:
 		if len(a.ops) != len(a.comparators):
 			return True
-		elif type(a.ops[0]) in [ast.In, ast.NotIn] and not isIterableType(eventualType(a.comparators[0])):
-			return True
+		elif type(a.ops[0]) in [ast.In, ast.NotIn]:
+			if not isIterableType(eventualType(a.comparators[0])):
+				return True
+			elif eventualType(a.comparators[0]) in [str, bytes] and eventualType(a.left) not in [str, bytes]:
+				return True
 		elif type(a.ops[0]) in [ast.Lt, ast.LtE, ast.Gt, ast.GtE]:
 			# In Python3, you can't compare different types. BOOOOOO!!
 			firstType = eventualType(a.left)
