@@ -254,8 +254,8 @@ def basicTypeSpecialFunction(cv):
 	"""If you're in a number or string (which has no metadata), move up to the AST to make the special functions work."""
 	if isinstance(cv, SwapVector) or isinstance(cv, MoveVector):
 		return cv
-	if type(cv.oldSubtree) == type(cv.newSubtree) and \
-			(cv.path[0] in [('n', 'Number'), ('s', 'String'), ('id', 'Name'), ('value', 'Name Constant'), ('s', 'Bytes')]):
+	if (cv.path[0] in [('n', 'Number'), ('s', 'String'), ('id', 'Name'), ('arg', 'Argument'), 
+						('value', 'Name Constant'), ('s', 'Bytes'), ('name', 'Alias')]):
 		cvCopy = cv.deepcopy()
 		cv.oldSubtree = deepcopy(cvCopy.traverseTree(cv.start))
 		if cv.path[0] == ('n', 'Number'):
@@ -265,11 +265,13 @@ def basicTypeSpecialFunction(cv):
 		elif cv.path[0] == ('id', 'Name'):
 			cv.newSubtree = ast.Name(cv.newSubtree, cv.oldSubtree.ctx)
 		elif cv.path[0] == ('arg', 'Argument'):
-			cv.newSubtree = ast.arg(cv.newSubtree)
+			cv.newSubtree = ast.arg(cv.newSubtree, cv.oldSubtree.annotation)
 		elif cv.path[0] == ('value', 'Name Constant'):
 			cv.newSubtree = ast.NameConstant(cv.newSubtree)
 		elif cv.path[0] == ('s', 'Bytes'):
 			cv.newSubtree = ast.Bytes(cv.newSubtree)
+		elif cv.path[0] == ('name', 'Alias'):
+			cv.newSubtree = ast.alias(cv.newSubtree, cv.oldSubtree.asname)
 		cv.path = cv.path[1:]
 	return cv
 
@@ -961,7 +963,7 @@ def mapEdit(canon, orig, edit, nameMap=None):
 		# Sometimes these simplifications result in an opportunity for better change vectors
 		if cv.isReplaceVector() and type(cv.oldSubtree) == type(cv.newSubtree):
 			# But we don't want to undo the work from before! That will lead to infinite loops.
-			if type(cv.oldSubtree) in [ast.NameConstant, ast.Bytes, ast.Str, ast.Num, ast.Name, ast.arg, int, str]:
+			if type(cv.oldSubtree) in [ast.NameConstant, ast.Bytes, ast.Str, ast.Num, ast.Name, ast.arg, ast.alias, int, str]:
 				pass
 			elif type(cv.oldSubtree) == ast.Return and (cv.oldSubtree.value == None or type(cv.oldSubtree.value) == ast.Name):
 				pass
