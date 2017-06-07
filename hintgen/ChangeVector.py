@@ -134,11 +134,21 @@ class ChangeVector:
 			if compareASTs(oldSpot, self.oldSubtree, checkEquality=True) != 0:
 				log("ChangeVector\tapplyChange\t" + str(caller) + "\t" + "Change old values don't match: " + str(self) + "\n" + str(printFunction(self.start)), "bug")
 			setattr(treeSpot, location[0], self.newSubtree)
-			# SPECIAL CASE. If we're changing the variable name, get rid of originalId
+			# SPECIAL CASE. If we're changing the variable name, get rid of metadata
 			if type(treeSpot) == ast.Name and location[0] == "id":
-				treeSpot.originalId = None
+				if hasattr(treeSpot, "originalId"):
+					del treeSpot.originalId
+				if hasattr(treeSpot, "dontChangeName"):
+					del treeSpot.dontChangeName
+				if hasattr(treeSpot, "randomVar"):
+					del treeSpot.randomVar
 			elif type(treeSpot) == ast.arg and location[0] == "arg":
-				treeSpot.originalId = None
+				if hasattr(treeSpot, "originalId"):
+					del treeSpot.originalId
+				if hasattr(treeSpot, "dontChangeName"):
+					del treeSpot.dontChangeName
+				if hasattr(treeSpot, "randomVar"):
+					del treeSpot.randomVar
 		elif type(location) == int and type(treeSpot) == list:
 			# Need to swap out whatever is in this location
 			if location >= 0 and location < len(treeSpot):
