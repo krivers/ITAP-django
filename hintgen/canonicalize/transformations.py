@@ -1170,6 +1170,16 @@ def isMutatingFunction(a):
 	# TODO: deal with student's functions
 	return funName not in funDict
 
+def allVariablesUsed(a):
+	if not isinstance(a, ast.AST):
+		return []
+	elif type(a) == ast.Name:
+		return [a]
+	variables = []
+	for child in ast.iter_child_nodes(a):
+		variables += allVariablesUsed(child)
+	return variables
+
 def allVariableNamesUsed(a):
 	"""Gathers all the variable names used in the ast"""
 	if not isinstance(a, ast.AST):
@@ -1224,10 +1234,17 @@ def propagateValues(a, liveVars):
 	elif type(a) == ast.Call:
 		# If something is mutated, it cannot be propagated anymore
 		if isMutatingFunction(a):
-			allVars = allVariableNamesUsed(a)
+			allVars = allVariablesUsed(a)
 			for var in allVars:
-				if (var in liveVars) and (eventualType(var) not in [int, float, bool, str]):
-					del liveVars[var]
+				if (eventualType(var) not in [int, float, bool, str]):
+					if (var.id in liveVars):
+						del liveVars[var.id]
+					currentLiveVars = list(liveVars.keys())
+					for liveVar in currentLiveVars:
+						varsWithin = allVariableNamesUsed(liveVars[liveVar])
+						if var.id in varsWithin:
+							del liveVars[liveVar]
+			return a
 		elif type(a.func) == ast.Name and a.func.id in liveVars and \
 				eventualType(liveVars[a.func.id]) in [int, float, complex, bytes, bool, type(None)]:
 			# Special case: don't move a simple value to the front of a Call
@@ -1279,13 +1296,13 @@ def clearBlockVars(a, liveVars):
 		return
 	elif type(a) == ast.Call:
 		if hasMutatingFunction(a):
-			for v in allVariableNamesUsed(a):
+			for v in allVariablesUsed(a):
 				if eventualType(v) not in [int, float, bool, str]:
-					if v in liveVars:
-						del liveVars[v]
+					if v.id in liveVars:
+						del liveVars[v.id]
 					liveKeys = list(liveVars.keys())
 					for var in liveKeys:
-						if v in allVariableNamesUsed(liveVars[var]):
+						if v.id in allVariableNamesUsed(liveVars[var]):
 							del liveVars[var]
 			return
 	elif type(a) == ast.For:
@@ -1552,13 +1569,16 @@ def deadCodeRemoval(a, liveVars=None, keepPrints=True, inLoop=False):
 				# Check to see if the names being assigned are in the set of live variables
 				allDead = True
 				allTargets = gatherAssignedVars(stmt.targets)
+				allNamesUsed = allVariableNamesUsed(stmt.value)
 				for target in allTargets:
-					if type(target) == ast.Name and target.id in liveVars:
-						liveVars.remove(target.id)
+					if type(target) == ast.Name and (target.id in liveVars or target.id in allNamesUsed):
+						if target.id in liveVars:
+							liveVars.remove(target.id)
 						allDead = False
 					elif type(target) in [ast.Subscript, ast.Attribute]:
 						liveVars |= set(allVariableNamesUsed(target))
 						allDead = False
+				# Also, check if the variable itself is contained in the value, because that can crash too
 				# If none are used, we can delete this line. Otherwise, use the value's vars
 				if allDead and (not couldCrash(stmt)) and (not containsTokenStepString(stmt)):
 					a.pop(i)
@@ -2507,7 +2527,7 @@ def staticVars(l, vars):
 
 		# If a mutable variable is used, we can't trust it
 		for var in mutableVars:
-			if var in allVariableNamesUsed(l[i]):
+			if var.id in allVariableNamesUsed(l[i]):
 				return False
 	return True
 
