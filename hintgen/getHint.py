@@ -351,8 +351,8 @@ def run_solution_space_improvement(f, problem_name, keyword):
 			student = Student(course=Course.objects.get(id=1), name=student_name)
 			student.save()
 		code = line[header.index("fun")]
-		if int(code_id) % 10 == 0:
-			log("Checking distance: " + str(code_id), "bug")
+		if i % 10 == 0:
+			log("Checking distance: " + str(i), "bug")
 
 		result, step_count, syntax_edits, semantic_edits, start_state, goal_state = do_hint_chain(code, student, problem)
 		start_weight = diffAsts.getWeight(start_state)
