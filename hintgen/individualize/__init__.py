@@ -665,9 +665,13 @@ def conditionalSpecialFunction(cv, orig):
 				values = [cv.newSubtree, origSpot]
 			else:
 				values = [origSpot, cv.newSubtree]
-			newCv = SubVector(cv.path[2:], origSpot, ast.BoolOp(ast.Or(), values), start=orig)
-			return newCv
-
+			if type(oldSpot) == ast.BoolOp:
+				newOp = deepcopy(oldSpot.op)
+				newCv = SubVector(cv.path[2:], origSpot, ast.BoolOp(newOp, values, newly_added=True), start=orig)
+				return newCv
+			else:
+				log("combinedConditional\tOLD SPOT: " + str(printFunction(oldSpot)), "bug")
+				return cv
 	if hasattr(cv.oldSubtree, "combinedConditionalOp"):
 		# We need to move up higher in the tree
 		if (type(cv.oldSubtree) == ast.Or and type(cv.newSubtree) == ast.And) or \
