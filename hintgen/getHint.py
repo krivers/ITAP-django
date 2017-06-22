@@ -1,5 +1,5 @@
 import ast, sys, io, pstats, cProfile, time, random, os
-from .canonicalize import getAllImports, runGiveIds, anonymizeNames, getCanonicalForm, propogateMetadata, propogateNameMetadata
+from .canonicalize import getAllImports, getAllImportStatements, runGiveIds, anonymizeNames, getCanonicalForm, propogateMetadata, propogateNameMetadata
 from .path_construction import diffAsts, generateNextStates
 from .individualize import mapEdit
 from .generate_message import formatHints
@@ -427,12 +427,12 @@ def generate_cleaned_state(source_state):
 			source_state.code + "\n" + cleaned_state.code, "bug")
 	return cleaned_state
 
-def generate_anon_state(cleaned_state, given_names):
+def generate_anon_state(cleaned_state, given_names, imports):
 	# Mid-level: just anonymize the variable names TODO variableMap
 	orig_tree = deepcopy(cleaned_state.tree)
 	runGiveIds(orig_tree)
 	anon_tree = deepcopy(orig_tree)
-	anon_tree = anonymizeNames(anon_tree, given_names)
+	anon_tree = anonymizeNames(anon_tree, given_names, imports)
 	if cleaned_state.count > 1 and cleaned_state.anon != None:
 		anon_state = cleaned_state.anon
 		anon_state.count += 1
@@ -460,7 +460,7 @@ def generate_anon_state(cleaned_state, given_names):
 	anon_state.orig_tree_source = tree_to_str(orig_tree)
 	return anon_state
 
-def generate_canonical_state(cleaned_state, anon_state, given_names):
+def generate_canonical_state(cleaned_state, anon_state, given_names, imports):
 	# Second level of abstraction: canonicalize the AST. Gets rid of redundancies.
 	args = eval(anon_state.problem.arguments)
 	orig_tree = deepcopy(cleaned_state.tree)
@@ -473,7 +473,7 @@ def generate_canonical_state(cleaned_state, anon_state, given_names):
 		canonical_state.orig_tree = orig_tree
 		canonical_state.orig_tree_source = tree_to_str(canonical_state.orig_tree)
 		canonical_state.tree = deepcopy(canonical_state.orig_tree)
-		canonical_state = getCanonicalForm(canonical_state, given_names, args)
+		canonical_state = getCanonicalForm(canonical_state, given_names, args, imports)
 		canonical_state.count += 1
 	else:
 		canonical_state = CanonicalState(code=cleaned_state.code, problem=cleaned_state.problem,
@@ -482,7 +482,7 @@ def generate_canonical_state(cleaned_state, anon_state, given_names):
 		canonical_state.orig_tree = orig_tree
 		canonical_state.orig_tree_source = tree_to_str(canonical_state.orig_tree)
 		canonical_state.tree = deepcopy(canonical_state.orig_tree)
-		canonical_state = getCanonicalForm(canonical_state, given_names, args)
+		canonical_state = getCanonicalForm(canonical_state, given_names, args, imports)
 		canonical_state = test(canonical_state, forceRetest=True)
 		if canonical_state.score != cleaned_state.score:
 			log("getHint\tgenerate_canonical_state\tScore mismatch: " + str(cleaned_state.score) + "," + str(canonical_state.score) + "\n" + cleaned_state.code + "\n" + canonical_state.code, "bug")
@@ -501,14 +501,14 @@ def generate_canonical_state(cleaned_state, anon_state, given_names):
 			canonical_state.orig_tree_source = tree_to_str(orig_tree)
 	return canonical_state
 
-def generate_states(source_state, given_names):
+def generate_states(source_state, given_names, imports):
 	# Convert to cleaned, anonymous, and canonical states
 
 	cleaned_state = generate_cleaned_state(source_state)
 	cleaned_state.save()
-	anon_state = generate_anon_state(cleaned_state, given_names)
+	anon_state = generate_anon_state(cleaned_state, given_names, imports)
 	anon_state.save()
-	canonical_state = generate_canonical_state(cleaned_state, anon_state, given_names)
+	canonical_state = generate_canonical_state(cleaned_state, anon_state, given_names, imports)
 	canonical_state.save()
 
 	source_state.cleaned = cleaned_state
@@ -567,12 +567,13 @@ def run_tests(source_state):
 
 	args = eval(source_state.problem.arguments)
 	given_code = ast.parse(source_state.problem.given_code)
-	imports = getAllImports(source_state.tree) + getAllImports(given_code)
-	inp = imports + (list(args.keys()) if type(args) == dict else [])
+	importNames = getAllImports(source_state.tree) + getAllImports(given_code)
+	inp = importNames + (list(args.keys()) if type(args) == dict else [])
 	given_names = [str(x) for x in inp]
+	imports = getAllImportStatements(source_state.tree) + getAllImportStatements(given_code)
 
 	if source_state.tree != None:
-		(cleaned_state, anon_state, canonical_state) = generate_states(source_state, given_names)
+		(cleaned_state, anon_state, canonical_state) = generate_states(source_state, given_names, imports)
 		save_states(source_state, cleaned_state, anon_state, canonical_state)
 	else:
 		source_state.save()
@@ -589,9 +590,10 @@ def get_hint(source_state, hint_level="default"):
 
 	args = eval(source_state.problem.arguments)
 	given_code = ast.parse(source_state.problem.given_code)
-	imports = getAllImports(source_state.tree) + getAllImports(given_code)
-	inp = imports + (list(args.keys()) if type(args) == dict else [])
+	importNames = getAllImports(source_state.tree) + getAllImports(given_code)
+	inp = importNames + (list(args.keys()) if type(args) == dict else [])
 	given_names = [str(x) for x in inp]
+	imports = getAllImportStatements(source_state.tree) + getAllImportStatements(given_code)
 
 	# Setup the correct states we need for future work
 	goals = list(AnonState.objects.filter(problem=source_state.problem, score=1)) + \
@@ -599,7 +601,7 @@ def get_hint(source_state, hint_level="default"):
 	for goal in goals:
 		goal.tree = str_to_tree(goal.tree_source)
 
-	(cleaned_state, anon_state, canonical_state) = generate_states(source_state, given_names)
+	(cleaned_state, anon_state, canonical_state) = generate_states(source_state, given_names, imports)
 
 	states = list(AnonState.objects.filter(problem=source_state.problem)) + \
 			 list(CanonicalState.objects.filter(problem=source_state.problem))

@@ -16,8 +16,40 @@ def str_to_tree(s):
 
 def builtInName(id):
 	"""Determines whether the given id is a built-in name"""
-	return id in (builtInNames + supportedLibraries + \
-		list(allPythonFunctions.keys()) + exceptionClasses)
+	if id in builtInNames + exceptionClasses:
+		return True
+	elif id in builtInFunctions.keys():
+		return True
+	elif id in list(allPythonFunctions.keys()) + supportedLibraries:
+		return False
+
+def importedName(id, importList):
+	for imp in importList:
+		if type(imp) == ast.Import:
+			for name in imp.names:
+				if hasattr(name, "asname") and name.asname != None:
+					if id == name.asname:
+						return True
+				else:
+					if id == name.name:
+						return True
+		elif type(imp) == ast.ImportFrom:
+			if hasattr(imp, "module"):
+				if imp.module in supportedLibraries:
+					libMap = libraryMap[imp.module]
+					for name in imp.names:
+						if hasattr(name, "asname") and name.asname != None:
+							if id == name.asname:
+								return True
+						else:
+							if id == name.name:
+								return True
+				else:
+					log("astTools\timportedName\tUnsupported library: " + printFunction(imp), "bug")
+
+			else:
+				log("astTools\timportedName\tWhy no module? " + printFunction(imp), "bug")
+	return False
 
 def isConstant(x):
 	"""Determine whether the provided AST is a constant"""
@@ -278,6 +310,17 @@ def getAllImports(a):
 									child.module + "," + alias.name, "bug")
 			else:
 				log("astTools\tgetAllImports\tUnknown library: " + child.module, "bug")
+	return imports
+
+def getAllImportStatements(a):
+	if not isinstance(a, ast.AST):
+		return []
+	imports = []
+	for child in ast.walk(a):
+		if type(child) == ast.Import:
+			imports.append(child)
+		elif type(child) == ast.ImportFrom:
+			imports.append(child)
 	return imports
 
 def getAllGlobalNames(a):

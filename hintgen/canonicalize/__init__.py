@@ -161,7 +161,7 @@ def stateDiff(s, funName):
 		log(printFunction(s.tree), "bug")
 		log(printFunction(s.orig_tree), "bug")
 
-def getCanonicalForm(s, given_names=None, argTypes=None):
+def getCanonicalForm(s, given_names=None, argTypes=None, imports=None):
 	#s.tree = deepcopy(s.tree) # no shallow copying! We need to leave the old tree alone
 
 	#giveIds(s.tree)
@@ -169,6 +169,8 @@ def getCanonicalForm(s, given_names=None, argTypes=None):
 	#s.orig_tree_source = tree_to_str(s.tree)
 	orig_score = s.score
 	orig_feedback = s.feedback
+	if imports == None:
+		imports = []
 
 	#crashableCopyPropagation
 	transformations = [
@@ -197,12 +199,12 @@ def getCanonicalForm(s, given_names=None, argTypes=None):
 	stateDiff(s, "propogateMetadata")
 	s.tree = simplify(s.tree)
 	stateDiff(s, "simplify")
-	s.tree = anonymizeNames(s.tree, given_names)
+	s.tree = anonymizeNames(s.tree, given_names, imports)
 	stateDiff(s, "anonymizeNames")
 	oldTree = None
 	while compareASTs(oldTree, s.tree, checkEquality=True) != 0:
 		oldTree = deepcopy(s.tree)
-		helperFolding(s.tree, s.problem.name)
+		helperFolding(s.tree, s.problem.name, imports)
 		stateDiff(s, "helperFolding")
 		for t in transformations:
 			s.tree = t(s.tree) # modify in place

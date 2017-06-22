@@ -5,7 +5,7 @@ from ..astTools import *
 
 ### VARIABLE ANONYMIZATION ###
 
-def updateVariableNames(a, varMap, scopeName, randomCounter):
+def updateVariableNames(a, varMap, scopeName, randomCounter, imports):
 	if not isinstance(a, ast.AST):
 		return
 
@@ -14,9 +14,9 @@ def updateVariableNames(a, varMap, scopeName, randomCounter):
 			if not hasattr(a, "originalId"):
 				a.originalId = a.name
 			a.name = varMap[a.name]
-		anonymizeStatementNames(a, varMap, "_" + a.name)
+		anonymizeStatementNames(a, varMap, "_" + a.name, imports)
 	elif type(a) == ast.arg:
-		if a.arg not in varMap and not builtInName(a.arg):
+		if a.arg not in varMap and not (builtInName(a.arg) or importedName(a.arg, imports)):
 			log("Can't assign to arg?", "bug")
 		if a.arg in varMap:
 			if not hasattr(a, "originalId"):
@@ -29,7 +29,7 @@ def updateVariableNames(a, varMap, scopeName, randomCounter):
 					a.dontChangeName = True
 			a.arg = varMap[a.arg]
 	elif type(a) == ast.Name:
-		if a.id not in varMap and not builtInName(a.id):
+		if a.id not in varMap and not (builtInName(a.id) or importedName(a.id, imports)):
 			varMap[a.id] = "r" + str(randomCounter[0]) + scopeName
 			randomCounter[0] += 1
 		if a.id in varMap:
@@ -44,9 +44,9 @@ def updateVariableNames(a, varMap, scopeName, randomCounter):
 			a.id = varMap[a.id]
 	else:
 		for child in ast.iter_child_nodes(a):
-			updateVariableNames(child, varMap, scopeName, randomCounter)
+			updateVariableNames(child, varMap, scopeName, randomCounter, imports)
 
-def gatherLocalScope(a, globalMap, scopeName, goBackwards=False):
+def gatherLocalScope(a, globalMap, scopeName, imports, goBackwards=False):
 	localMap = { }
 	varLetter = "g" if type(a) == ast.Module else "v"
 	paramCounter = 0
@@ -54,7 +54,7 @@ def gatherLocalScope(a, globalMap, scopeName, goBackwards=False):
 	if type(a) == ast.FunctionDef:
 		for param in a.args.args:
 			if type(param) == ast.arg:
-				if not builtInName(param.arg) and param.arg not in localMap and param.arg not in globalMap:
+				if not (builtInName(param.arg) or importedName(param.arg, imports)) and param.arg not in localMap and param.arg not in globalMap:
 					localMap[param.arg] = "p" + str(paramCounter) + scopeName
 					paramCounter += 1
 			else:
@@ -67,9 +67,10 @@ def gatherLocalScope(a, globalMap, scopeName, goBackwards=False):
 	while len(items) > 0:
 		item = items[0]
 		if type(item) in [ast.FunctionDef, ast.ClassDef]:
-			if not builtInName(item.name) and item.name not in localMap and item.name not in globalMap:
-				localMap[item.name] = "helper_" + varLetter + str(localCounter) + scopeName
-				localCounter += 1
+			if not (builtInName(item.name) or importedName(item.name, imports)):
+				if item.name not in localMap and item.name not in globalMap:
+					localMap[item.name] = "helper_" + varLetter + str(localCounter) + scopeName
+					localCounter += 1
 			else:
 				item.dontChangeName = True
 
@@ -96,9 +97,10 @@ def gatherLocalScope(a, globalMap, scopeName, goBackwards=False):
 
 			for assn in assns:
 				if type(assn) == ast.Name:
-					if not builtInName(assn.id) and assn.id not in localMap and assn.id not in globalMap:
-						localMap[assn.id] = varLetter + str(localCounter) + scopeName
-						localCounter += 1
+					if not (builtInName(assn.id) or importedName(assn.id, imports)):
+						if assn.id not in localMap and assn.id not in globalMap:
+							localMap[assn.id] = varLetter + str(localCounter) + scopeName
+							localCounter += 1
 
 		if type(item) in [ast.For, ast.While, ast.If]:
 			items += item.body + item.orelse
@@ -109,9 +111,9 @@ def gatherLocalScope(a, globalMap, scopeName, goBackwards=False):
 		items = items[1:]
 	return localMap
 
-def anonymizeStatementNames(a, globalMap, scopeName, goBackwards=False):
+def anonymizeStatementNames(a, globalMap, scopeName, imports, goBackwards=False):
 	"""Gather the local variables, then update variable names in each line"""
-	localMap = gatherLocalScope(a, globalMap, scopeName, goBackwards=goBackwards)
+	localMap = gatherLocalScope(a, globalMap, scopeName, imports, goBackwards=goBackwards)
 	varMap = { }
 	varMap.update(globalMap)
 	varMap.update(localMap)
@@ -119,11 +121,11 @@ def anonymizeStatementNames(a, globalMap, scopeName, goBackwards=False):
 	functionsSeen = []
 	if type(a) == ast.FunctionDef:
 		for arg in a.args.args:
-			updateVariableNames(arg, varMap, scopeName, randomCounter)
+			updateVariableNames(arg, varMap, scopeName, randomCounter, imports)
 	for line in a.body:
-		updateVariableNames(line, varMap, scopeName, randomCounter)
+		updateVariableNames(line, varMap, scopeName, randomCounter, imports)
 
-def anonymizeNames(a, namesToKeep):
+def anonymizeNames(a, namesToKeep, imports):
 	"""Anonymize all of variables/names that occur in the given AST"""
 	"""If we run this on an anonymized AST, it will fix the names again to get rid of any gaps!"""
 	if type(a) != ast.Module:
@@ -131,19 +133,19 @@ def anonymizeNames(a, namesToKeep):
 	globalMap = { }
 	for var in namesToKeep:
 		globalMap[var] = var
-	anonymizeStatementNames(a, globalMap, "", goBackwards=True)
+	anonymizeStatementNames(a, globalMap, "", imports, goBackwards=True)
 	return a
 
-def propogateNameMetadata(a, namesToKeep):
+def propogateNameMetadata(a, namesToKeep, imports):
 	"""Propogates name metadata through a state. We assume that the names are all properly formatted"""
 	if type(a) == list:
 		for child in a:
-			child = propogateNameMetadata(child, namesToKeep)
+			child = propogateNameMetadata(child, namesToKeep, imports)
 		return a
 	elif not isinstance(a, ast.AST):
 		return a
 	if type(a) == ast.Name:
-		if builtInName(a.id):
+		if (builtInName(a.id) or importedName(a.id, imports)):
 			pass
 		elif a.id in namesToKeep:
 			a.dontChangeName = True
@@ -153,7 +155,7 @@ def propogateNameMetadata(a, namesToKeep):
 			if not isAnonVariable(a.id):
 				a.dontChangeName = True # it's a name we shouldn't mess with
 	elif type(a) == ast.arg:
-		if builtInName(a.arg):
+		if (builtInName(a.arg) or importedName(a.arg, imports)):
 			pass
 		elif a.arg in namesToKeep:
 			a.dontChangeName = True
@@ -163,7 +165,7 @@ def propogateNameMetadata(a, namesToKeep):
 			if not isAnonVariable(a.arg):
 				a.dontChangeName = True # it's a name we shouldn't mess with
 	for child in ast.iter_child_nodes(a):
-		child = propogateNameMetadata(child, namesToKeep)
+		child = propogateNameMetadata(child, namesToKeep, imports)
 	return a
 
 ### HELPER FOLDING ###
@@ -187,13 +189,13 @@ def findHelperFunction(a, helperId, helperCount):
 				return a
 	return None
 
-def individualizeVariables(a, variablePairs, idNum):
+def individualizeVariables(a, variablePairs, idNum, imports):
 	"""Replace variable names with new individualized ones (for inlining methods)"""
 	if not isinstance(a, ast.AST):
 		return
 
 	if type(a) == ast.Name:
-		if a.id not in variablePairs and not builtInName(a.id):
+		if a.id not in variablePairs and not (builtInName(a.id) or importedName(a.id, imports)):
 			name = "_var_" + a.id + "_" + str(idNum[0])
 			variablePairs[a.id] = name
 		if a.id in variablePairs:
@@ -215,7 +217,7 @@ def individualizeVariables(a, variablePairs, idNum):
 			variablePairs[a.func.id] = a.func.id # save the function name!
 
 	for child in ast.iter_child_nodes(a):
-		individualizeVariables(child, variablePairs, idNum)
+		individualizeVariables(child, variablePairs, idNum, imports)
 
 def replaceAst(a, old, new, shouldReplace):
 	"""Replace the old value with the new one, but only once! That's what the shouldReplace variable is for."""
@@ -226,13 +228,13 @@ def replaceAst(a, old, new, shouldReplace):
 		return new
 	return applyToChildren(a, lambda x: replaceAst(x, old, new, shouldReplace))
 
-def mapHelper(a, helper, idNum):
+def mapHelper(a, helper, idNum, imports):
 	"""Map the helper function into this function, if it's used. idNum gives us the current id"""
 	if type(a) in [ast.FunctionDef, ast.ClassDef]:
-		a.body = mapHelper(a.body, helper, idNum)
+		a.body = mapHelper(a.body, helper, idNum, imports)
 	elif type(a) in [ast.For, ast.While, ast.If]:
-		a.body = mapHelper(a.body, helper, idNum)
-		a.orelse = mapHelper(a.orelse, helper, idNum)
+		a.body = mapHelper(a.body, helper, idNum, imports)
+		a.orelse = mapHelper(a.orelse, helper, idNum, imports)
 	if type(a) != list:
 		return a # we only deal with lists
 
@@ -240,7 +242,7 @@ def mapHelper(a, helper, idNum):
 	body = a
 	while i < len(body):
 		if type(body[i]) in [ast.FunctionDef, ast.ClassDef, ast.For, ast.While, ast.If]:
-			body[i] = mapHelper(body[i], helper, idNum) # deal with blocks first
+			body[i] = mapHelper(body[i], helper, idNum, imports) # deal with blocks first
 		# While we still need to replace a function being called
 		helperCount = 0
 		while countVariables(body[i], helper.name) > helperCount:
@@ -252,10 +254,10 @@ def mapHelper(a, helper, idNum):
 
 			# First, update the method's variables
 			methodArgs = deepcopy(helper.args)
-			individualizeVariables(methodArgs, variablePairs, idNum)
+			individualizeVariables(methodArgs, variablePairs, idNum, imports)
 			methodLines = deepcopyList(helper.body)
 			for j in range(len(methodLines)):
-				individualizeVariables(methodLines[j], variablePairs, idNum)
+				individualizeVariables(methodLines[j], variablePairs, idNum, imports)
 
 			# Then, move each of the parameters into an assignment
 			argLines = []
@@ -336,7 +338,7 @@ def mapVariable(a, varId, assn):
 			break
 	return a
 
-def helperFolding(a, mainFun):
+def helperFolding(a, mainFun, imports):
 	"""When possible, fold the functions used in this module into their callers"""
 	if type(a) != ast.Module:
 		return a
@@ -377,7 +379,7 @@ def helperFolding(a, mainFun):
 								if i != j and type(body[j]) == ast.FunctionDef:
 									if countVariables(body[j], item.name) > 0:
 										used = True
-									mapHelper(body[j], item, globalCounter)
+									mapHelper(body[j], item, globalCounter, imports)
 									if countVariables(body[j], item.name) > 0:
 										gone = False
 							if used and gone:

@@ -35,8 +35,7 @@ mutatingTypeCastBuiltInFunctions = {
 	"super" : None
 	}
 
-builtInNames = [ "None", "True", "False", "NotImplemented", "Ellipsis" ] + \
-	list(staticTypeCastBuiltInFunctions.keys()) + list(mutatingTypeCastBuiltInFunctions.keys())
+builtInNames = [ "None", "True", "False", "NotImplemented", "Ellipsis" ]
 
 staticBuiltInFunctions = {	
 	"abs" : { (int,) : int, (float,) : float }, 
