@@ -290,11 +290,11 @@ def generateVariableDistributions(s, g, goals, states):
 				break
 	randomCount = nCount = newRandomCount = 0
 	if len(sVariables) > len(gVariables):
-		gVariables |= set([("random" + str(i), None) for i in range(len(sVariables) - len(gVariables))])
 		randomCount = newRandomCount = len(sVariables) - len(gVariables)
+		gVariables |= set([("random" + str(i), None) for i in range(len(sVariables) - len(gVariables))])
 	elif len(gVariables) > len(sVariables):
-		sVariables |= set([("n" + str(i) + "_global", None) for i in range(len(gVariables) - len(sVariables))])
 		nCount = len(gVariables) - len(sVariables)
+		sVariables |= set([("n" + str(i) + "_global", None) for i in range(len(gVariables) - len(sVariables))])
 
 	# First, track down vars which are going to conflict with built-in names in the goal state
 	starterPairs = []
