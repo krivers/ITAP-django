@@ -563,7 +563,7 @@ def test_code(source_state):
 def run_tests(source_state):
 	orig_code = source_state.code
 	source_state = test_code(source_state)
-	source.state.code = orig_code
+	source_state.code = orig_code
 
 	args = eval(source_state.problem.arguments)
 	given_code = ast.parse(source_state.problem.given_code)
@@ -688,7 +688,7 @@ def get_hint(source_state, hint_level="default"):
 						continue
 					else:
 						source_state.edit = None
-						source_state.hint = "No hint could be generated"
+						source_state.hint = Hint(message="No hint could be generated")
 						break
 			hint = formatHints(used_state, edit, hint_level, used_state.orig_tree) # generate the right level of hint
 			source_state.edit = edit

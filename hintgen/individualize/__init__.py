@@ -443,7 +443,7 @@ def multiCompSpecialFunction(cv, orig, canon, edit):
 				else:
 					log("individualize\tmultiComp\tWhere's the op path: " + str(newPath), "bug")
 			else:
-				log("individualize\tmultiComp\tNon-bool op: \n" + printFunction(cv.start) + "\n" + printFunction(origSpot), "bug")
+				log("individualize\tmultiComp\tNon-bool op: \n" + printFunction(cv.start) + "\n" + str(type(origSpot)) + ": " + printFunction(origSpot), "bug")
 		else:
 			log("individualize\tmultiComp\tWhere's the parent path: " + str(parentPath), "bug")
 	# Catch other multi-comp problems
@@ -875,7 +875,7 @@ def mapEdit(canon, orig, edit, nameMap=None):
 					if hasattr(cv.newSubtree, "variableGlobalId"):
 						delattr(cv.newSubtree, "variableGlobalId")
 			else:
-				log("Individualize\tcouldn't find variable in original: " + str(cv) + \
+				log("Individualize\tcouldn't find variable in original: " + str(cv) + "\n" + str(edit) + "\n" + \
 						  "\n" + printFunction(cv.start) + "\n" + printFunction(updatedOrig) + "\n" + printFunction(orig), "bug")
 
 		if hasattr(cv.oldSubtree, "second_global_id"):

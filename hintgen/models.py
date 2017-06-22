@@ -33,8 +33,8 @@ class Problem(models.Model):
 
 class Testcase(models.Model):
     problem = models.ForeignKey('Problem', on_delete=models.CASCADE, related_name="tests")
-    test_input = models.TextField() # should be interpreted by pickle
-    test_output = models.TextField() # should be interpreted by pickle
+    test_input = models.TextField() 
+    test_output = models.TextField()
     test_extra = models.TextField(blank=True) # specific keywords specify extra tests. For example, 'checkCopy' checks if the input is modified
     def __str__(self):
         return "Test " + str(self.id) + " for " + str(self.problem)

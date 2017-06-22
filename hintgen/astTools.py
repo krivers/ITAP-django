@@ -870,7 +870,7 @@ def compareASTs(a, b, checkEquality=False):
 		if type(a) != type(b):
 			builtins = [bool, int, float, str, bytes, complex]
 			if type(a) not in builtins or type(b) not in builtins:
-				log("MISSING BUILT-IN TYPE: " + str(type(a)) + "," + str(type(b)))
+				log("MISSING BUILT-IN TYPE: " + str(type(a)) + "," + str(type(b)), "bug")
 			return builtins.index(type(a)) - builtins.index(type(b))
 		return cmp(a, b)
 	elif (not isinstance(a, ast.AST)) or (not isinstance(b, ast.AST)):
