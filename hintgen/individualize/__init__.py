@@ -65,10 +65,7 @@ def undoReverse(a):
 # Applies special functions if they're included as metadata OR if they're specified by ID
 def specialFunctions(cv, old, new):
 	if type(old) == type(new) == list:
-		for i in range(min(len(old), len(new))):
-			(old[i], new[i]) = specialFunctions(cv, old[i], new[i])
-		cv.oldSubtree = old
-		cv.newSubtree = new
+		log("individualize\tspecialFunctions\tWhy are we comparing lists?: " + str(cv) + ";" + printFunction(old) + ";" + printFunction(new), "bug")
 		return cv
 	rev = neg = False
 	if (hasattr(old, "reversed") and old.reversed and (not hasattr(old, "multCompFixed"))):
