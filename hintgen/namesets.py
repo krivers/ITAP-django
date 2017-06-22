@@ -384,7 +384,8 @@ libraryMap = { "string" : [ "ascii_letters", "ascii_lowercase", "ascii_uppercase
 							"vonmisesvariate", "paretovariate", "weibullvariate", "WichmannHill", 
 							"whseed", "SystemRandom" ],
 				"__future__" : ["nested_scopes", "generators", "division", "absolute_import",
-							"with_statement", "print_function", "unicode_literals"] }
+							"with_statement", "print_function", "unicode_literals"],
+				"copy" : ["copy", "deepcopy"] }
 
 libraryDictMap = { "string" : builtInStringFunctions,
 					"math" : mathFunctions,
