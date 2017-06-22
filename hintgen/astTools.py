@@ -868,7 +868,7 @@ def compareASTs(a, b, checkEquality=False):
 	# AST before primitive
 	if (not isinstance(a, ast.AST)) and (not isinstance(b, ast.AST)):
 		if type(a) != type(b):
-			builtins = [bool, int, float, str, bytes]
+			builtins = [bool, int, float, str, bytes, complex]
 			if type(a) not in builtins or type(b) not in builtins:
 				log("MISSING BUILT-IN TYPE: " + str(type(a)) + "," + str(type(b)))
 			return builtins.index(type(a)) - builtins.index(type(b))
