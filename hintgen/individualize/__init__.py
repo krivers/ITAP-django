@@ -347,7 +347,7 @@ def hasMultiComp(a):
 			return True
 	return False
 
-def multiCompSpecialFunction(cv, orig, canon):
+def multiCompSpecialFunction(cv, orig, canon, edit):
 	"""Check if this is the special multi-comparison case. If it is, modify the expression appropriately."""
 	# If we're adding a comp/op to a comparison
 	if isinstance(cv, AddVector) and cv.path[1] in [('ops', 'Compare'), ('comparators', 'Compare')]:
@@ -360,7 +360,22 @@ def multiCompSpecialFunction(cv, orig, canon):
 		cvCopy.path = cvCopy.path[1:]
 		oldSpot = deepcopy(cvCopy.traverseTree(cv.start))
 		cvCopy = cv.deepcopy()
-		cvCopy.path = generatePathToId(orig, oldSpot.global_id)
+		if hasattr(oldSpot, "global_id"):
+			cvCopy.path = generatePathToId(orig, oldSpot.global_id)
+		else:
+			# We need to split up the multicomp
+			while not hasattr(oldSpot, "global_id"):
+				cvCopy.path = cvCopy.path[1:]
+				oldSpot = deepcopy(cvCopy.traverseTree(cv.start))
+			treeResult = cv.applyChange(caller="multiCompSpecialFunction 0")
+			newSpot = deepcopy(cvCopy.traverseTree(treeResult))
+			newCv = ChangeVector(cvCopy.path[1:], oldSpot, newSpot, start=orig)
+			newCv.path = generatePathToId(orig, oldSpot.global_id)[1:]
+			newCv.oldSubtree = deepcopy(newCv.traverseTree(orig))
+			newCv.path = newCv.path[1:]
+			log("individualize\tmultiCompSpecialFunction\tUpdated CV: " + \
+				str(cv) + "\n" + str(newCv) + "\n" + printFunction(cv.start) + "\n" + printFunction(orig), "bug")
+			return newCv
 		if cvCopy.path != None:
 			cvCopy.path = [-1] + cvCopy.path # The None,None is to force the traversal to go all the way to the node we want, instead of its parent
 			newSpot = deepcopy(cvCopy.traverseTree(orig))
@@ -804,7 +819,7 @@ def mapEdit(canon, orig, edit, nameMap=None):
 		cv = helperFoldingSpecialFunction(cv, edit, updatedOrig)
 		cv = noneSpecialFunction(cv)
 		cv = augAssignSpecialFunction(cv, updatedOrig)
-		cv = multiCompSpecialFunction(cv, updatedOrig, canon)
+		cv = multiCompSpecialFunction(cv, updatedOrig, canon, edit)
 		if type(cv) == list:
 			edit = edit[:count] + cv + edit[count+1:]
 			continue
