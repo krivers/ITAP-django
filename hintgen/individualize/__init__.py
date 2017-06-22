@@ -407,7 +407,7 @@ def multiCompSpecialFunction(cv, orig, canon, edit):
 				log("individualize\tmultiComp\tUnexpected type: " + str(type(oldSpot)) + "," +
 						  str(type(newSpot)), "bug")
 			# Otherwise, we need to put back in the boolean operation
-			cv = SubVector(cvCopy.path, newSpot, ast.BoolOp(ast.And(), [newSpot, cv.newSubtree]), cv.start)
+			cv = SubVector(cvCopy.path, newSpot, ast.BoolOp(ast.And(), [newSpot, cv.newSubtree], newly_added=True), cv.start)
 			return cv
 	elif isinstance(cv, DeleteVector) and hasattr(cv.oldSubtree, "multiCompPart") and type(cv.oldSubtree) == ast.Compare:
 		# We can't just delete this, but we can take out this link in the operation by splitting the multi-comp in two
@@ -429,16 +429,16 @@ def multiCompSpecialFunction(cv, orig, canon, edit):
 					rightOps = origSpot.ops[deletedPos+1:]
 					rightValues = origSpot.comparators[deletedPos:]
 					if len(leftOps) == 0:
-						newCompare = ast.Compare(rightValues[0], rightOps, rightValues[1:])
+						newCompare = ast.Compare(rightValues[0], rightOps, rightValues[1:], newly_added=True)
 						return ChangeVector(parentPath, origSpot, newCompare, start=orig)
 					elif len(rightOps) == 0:
-						newCompare = ast.Compare(leftValues[0], leftOps, leftValues[1:])
+						newCompare = ast.Compare(leftValues[0], leftOps, leftValues[1:], newly_added=True)
 						return ChangeVector(parentPath, origSpot, newCompare, start=orig)
 					else:
 						# combine the two with And
 						leftCompare = ast.Compare(leftValues[0], leftOps, leftValues[1:])
 						rightCompare = ast.Compare(rightValues[0], rightOps, rightValues[1:])
-						newResult = ast.BoolOp(ast.And(), [leftCompare, rightCompare])
+						newResult = ast.BoolOp(ast.And(), [leftCompare, rightCompare], newly_added=True)
 						return ChangeVector(parentPath, origSpot, newResult, start=orig)
 				else:
 					log("individualize\tmultiComp\tWhere's the op path: " + str(newPath), "bug")
@@ -453,7 +453,7 @@ def multiCompSpecialFunction(cv, orig, canon, edit):
 		oldSpot = deepcopy(cv.traverseTree(canon))
 		treeResult = cvCopy.applyChange(caller="multiCompSpecialFunction 1")
 		newSpot = deepcopy(cvCopy.traverseTree(treeResult))
-		cv = ChangeVector(cvCopy.path, oldSpot, ast.BoolOp(cv.newSubtree, [newSpot]), cv.start)
+		cv = ChangeVector(cvCopy.path, oldSpot, ast.BoolOp(cv.newSubtree, [newSpot], newly_added=True), cv.start)
 		return cv
 	if (cv.oldSubtree == None or not hasattr(cv.oldSubtree, "global_id")) and hasMultiComp(canon):
 		spot = None
@@ -473,7 +473,7 @@ def multiCompSpecialFunction(cv, orig, canon, edit):
 			cvCopy.path = cvCopy.path[1:] # then get rid of the None, None
 			if type(newSpot) == ast.Compare: # DON'T CHANGE IT OTHERWISE
 				# Otherwise, we need to put back in the boolean operation
-				cv = SubVector(cvCopy.path, newSpot, ast.BoolOp(ast.And(), [newSpot, cv.newSubtree]), cv.start)
+				cv = SubVector(cvCopy.path, newSpot, ast.BoolOp(ast.And(), [newSpot, cv.newSubtree], newly_added=True), cv.start)
 				return cv
 	if (hasattr(cv.oldSubtree, "multiCompMiddle") and cv.oldSubtree.multiCompMiddle) or \
 		(hasattr(cv.oldSubtree, "multiCompPart") and cv.oldSubtree.multiCompPart):
