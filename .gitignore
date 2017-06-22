@@ -99,5 +99,9 @@ hintgen/combined_data/
 hintgen/log/
 hintgen/test/tmp/
 
+hintgen/parser/
+hintgen/lexerSyntaxHint.py
+
 mydatabase
+
 

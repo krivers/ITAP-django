@@ -3,7 +3,7 @@ from .tools import log, powerSet, fastPowerSet
 from .astTools import structureTree
 from .paths import TEST_PATH
 from .display import printFunction
-from .lexerSyntaxHint import getLexerSyntaxHint
+#from .lexerSyntaxHint import getLexerSyntaxHint
 from .SyntaxEdit import SyntaxEdit
 from .models import SourceState, Hint
 
